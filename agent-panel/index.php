@@ -118,6 +118,7 @@ if ($activeCategory !== '') {
 // of his customers. The agent writes the name of his customer, never a
 // telegram id: a random suffix is added to the name of the account.
 $shopFlash = null;
+$created = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string) ($_POST['action'] ?? '') === 'buy') {
     if (!nx_agent_csrf_check()) {
         $shopFlash = ['type' => 'error', 'msg' => 'درخواست نامعتبر بود. دوباره تلاش کنید.', 'detail' => []];
@@ -128,10 +129,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string) ($_POST['action'] ?? '') =
             trim((string) ($_POST['username'] ?? '')),
             $percent
         );
-        $shopFlash = ['type' => $buyResult['ok'] ? 'success' : 'error', 'msg' => $buyResult['msg'], 'detail' => $buyResult['detail'] ?? []];
-        if ($buyResult['ok']) {
-            $credit = max(0, (float) $credit - (float) ($buyResult['detail']['price'] ?? 0));
+        if (!empty($buyResult['ok'])) {
+            // The service is made: its details wait in the session for the
+            // luxury window. The page is loaded again with a GET, so a refresh
+            // of the page never buys the same product a second time.
+            $_SESSION['nx_agent_created'] = [
+                'msg' => (string) ($buyResult['msg'] ?? ''),
+                'detail' => (array) ($buyResult['detail'] ?? []),
+                'time' => time(),
+            ];
+            $createdUrl = 'index.php?view=shop&created=1';
+            if ($activeCategory !== '') {
+                $createdUrl .= '&cat=' . urlencode($activeCategory);
+            }
+            header('Location: ' . $createdUrl);
+            exit;
         }
+        $shopFlash = ['type' => 'error', 'msg' => (string) $buyResult['msg'], 'detail' => (array) ($buyResult['detail'] ?? [])];
+    }
+}
+// The service that was just made: the window of it opens right away. The
+// details of it never stay in the session for long.
+if (!empty($_SESSION['nx_agent_created']) && is_array($_SESSION['nx_agent_created'])) {
+    $createdAge = time() - (int) ($_SESSION['nx_agent_created']['time'] ?? 0);
+    if ($createdAge > 600 || $createdAge < 0) {
+        unset($_SESSION['nx_agent_created']);
+    }
+}
+if ((string) ($_GET['created'] ?? '') === '1' && !empty($_SESSION['nx_agent_created']) && is_array($_SESSION['nx_agent_created'])) {
+    $created = $_SESSION['nx_agent_created'];
+    unset($_SESSION['nx_agent_created']);
+    if (empty($created['detail'])) {
+        $created = null;
     }
 }
 
@@ -167,6 +196,16 @@ $navItems = [
 function nx_num($v)
 {
     return number_format((float) $v);
+}
+
+// The date of a row of the bot: a unix time becomes a readable date.
+function nx_agent_date($ts, string $fmt = 'Y/m/d H:i')
+{
+    $ts = (int) $ts;
+    if ($ts <= 0) {
+        return '—';
+    }
+    return date($fmt, $ts);
 }
 ?>
 <!DOCTYPE html>
@@ -293,7 +332,7 @@ function nx_num($v)
     <section id="v-users">
       <div class="rs-head"><div><h1>مدیریت کاربران</h1><p>کاربرانی که با پنل شما سرویس گرفته‌اند</p></div><div class="grow"></div></div>
       <div class="card">
-        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>نام کاربری</th><th>سرویس‌ها</th><th>موجودی</th><th>تعداد سرویس</th><th>ثبت</th></tr></thead><tbody>
+        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>نام کاربری</th><th>سرویس‌ها</th><th>موجودی</th><th>تعداد سرویس</th><th>ثبت</th><th>لینک اتصال</th></tr></thead><tbody>
         <?php
         $subServiceCount = [];
         $subServiceNames = [];
@@ -307,8 +346,10 @@ function nx_num($v)
             $subNames = array_values(array_unique(array_filter($subServiceNames[$subId] ?? []))); ?>
           <tr>
             <td>
-              <b><?= htmlspecialchars((string) ($sub['username'] ?? '')) ?></b>
-              <div style="font-size:.7rem;color:var(--mute)" dir="ltr"><?= htmlspecialchars($subId) ?></div>
+              <button type="button" class="nx-user-btn" onclick="nxOpenCustomer('<?= htmlspecialchars($subId, ENT_QUOTES, 'UTF-8') ?>')" title="مشخصات کامل این کاربر">
+                <b><?= htmlspecialchars((string) ($sub['username'] ?? '')) ?></b>
+                <small><?= htmlspecialchars($subId) ?></small>
+              </button>
             </td>
             <td class="mono">
               <?php if ($subNames): ?>
@@ -321,11 +362,16 @@ function nx_num($v)
             </td>
             <td class="mono"><?= nx_num($sub['Balance'] ?? 0) ?></td>
             <td class="mono"><?= (int) ($subServiceCount[$subId] ?? 0) ?></td>
-            <td class="mono"><?= htmlspecialchars((string) ($sub['register'] ?? '')) ?></td>
+            <td class="mono"><?= htmlspecialchars(nx_agent_date($sub['register'] ?? 0)) ?></td>
+            <td>
+              <button type="button" class="nx-link-btn" onclick="nxOpenLinks('<?= htmlspecialchars($subId, ENT_QUOTES, 'UTF-8') ?>')" title="لینک اتصال سرویس‌های این کاربر">🔗 نمایش لینک</button>
+            </td>
           </tr>
         <?php endforeach; ?>
-        <?php if (!$subs): ?><tr><td colspan="5" style="color:var(--muted)">هنوز کاربری با پنل شما ثبت نشده است.</td></tr><?php endif; ?>
+        <?php if (!$subs): ?><tr><td colspan="6" style="color:var(--muted)">هنوز کاربری با پنل شما ثبت نشده است.</td></tr><?php endif; ?>
         </tbody></table></div>
+        <p class="nx-hint">روی نام کاربری بزنید تا پنجرهٔ مشخصاتش باز شود — این پنجره فقط خواندنی است و هیچ تغییری نمی‌دهد.
+          دکمهٔ «🔗 نمایش لینک» لینک اتصال سرویس‌های همان کاربر را از پنل می‌گیرد تا به مشتری بدهید.</p>
       </div>
     </section>
 
@@ -336,39 +382,6 @@ function nx_num($v)
       <?php if ($shopFlash): ?>
         <div class="nx-flash nx-flash-<?= htmlspecialchars((string) $shopFlash['type']) ?>">
           <b><?= $shopFlash['type'] === 'success' ? '✅' : '⚠️' ?> <?= htmlspecialchars((string) $shopFlash['msg']) ?></b>
-          <?php if (!empty($shopFlash['detail']['username'])): ?>
-            <?php
-            $flashLink = (string) ($shopFlash['detail']['link'] ?? '');
-            if ($flashLink === '') {
-                $flashLink = (string) ($shopFlash['detail']['subscription_url'] ?? '');
-            }
-            $flashConfigs = [];
-            foreach ((array) ($shopFlash['detail']['configs'] ?? []) as $flashConfig) {
-                $flashConfig = trim((string) $flashConfig);
-                if ($flashConfig !== '') {
-                    $flashConfigs[] = $flashConfig;
-                }
-            }
-            ?>
-            <div class="nx-flash-detail">
-              <div class="kv"><span>نام کاربری سرویس</span><b class="mono"><?= htmlspecialchars((string) $shopFlash['detail']['username']) ?></b></div>
-              <div class="kv"><span>نام مشتری</span><b><?= htmlspecialchars((string) ($shopFlash['detail']['customer'] ?? '')) ?></b></div>
-              <?php if ($flashLink !== ''): ?>
-                <div class="kv"><span>لینک اتصال</span><b class="mono" style="word-break:break-all"><?= htmlspecialchars($flashLink) ?></b></div>
-              <?php endif; ?>
-              <?php if ($flashConfigs): ?>
-                <div class="nx-flash-configs">
-                  <span class="nx-flash-label">کانفیگ‌ها (کپی کنید و به مشتری بدهید)</span>
-                  <?php foreach ($flashConfigs as $flashConfig): ?>
-                    <code class="nx-flash-config"><?= htmlspecialchars($flashConfig) ?></code>
-                  <?php endforeach; ?>
-                </div>
-              <?php endif; ?>
-              <div class="kv"><span>محصول</span><b><?= htmlspecialchars((string) ($shopFlash['detail']['product'] ?? '')) ?></b></div>
-              <div class="kv"><span>لوکیشن</span><b><?= htmlspecialchars((string) ($shopFlash['detail']['panel'] ?? '')) ?></b></div>
-              <div class="kv"><span>مبلغ پرداختی</span><b class="mono"><?= nx_num((float) ($shopFlash['detail']['price'] ?? 0)) ?> تومان</b></div>
-            </div>
-          <?php endif; ?>
         </div>
       <?php endif; ?>
 
@@ -524,6 +537,113 @@ Token: <?= htmlspecialchars($apiToken) ?>
 
   </main>
 </div>
+
+<!-- the window of a user: the details of him and the links of his services -->
+<div class="nx-lux-bk" id="nx-customer-modal" hidden>
+  <div class="nx-lux" onclick="event.stopPropagation()">
+    <div class="nx-lux-head">
+      <span class="ic" id="nx-cust-ic">👤</span>
+      <div>
+        <h2 id="nx-cust-title">مشخصات کاربر</h2>
+        <p id="nx-cust-sub">فقط خواندنی — هیچ چیزی از اینجا تغییر نمی‌کند</p>
+      </div>
+      <button type="button" class="x" onclick="nxCloseCustomer()" aria-label="بستن">✕</button>
+    </div>
+    <div class="nx-lux-body" id="nx-cust-body"></div>
+    <div class="nx-lux-foot">
+      <button type="button" class="rs-btn ghost" onclick="nxCloseCustomer()">بستن</button>
+    </div>
+  </div>
+</div>
+
+<?php if ($created): ?>
+<?php
+$cd = (array) ($created['detail'] ?? []);
+$cdLink = trim((string) ($cd['link'] ?? ''));
+if ($cdLink === '') {
+    $cdLink = trim((string) ($cd['subscription_url'] ?? ''));
+}
+$cdConfigs = [];
+foreach ((array) ($cd['configs'] ?? []) as $cdConfig) {
+    $cdConfig = trim((string) $cdConfig);
+    if ($cdConfig !== '') {
+        $cdConfigs[] = $cdConfig;
+    }
+}
+// The text of the "copy all" button: everything the customer needs.
+$cdText = "نام کاربری سرویس: " . (string) ($cd['username'] ?? '') . "\n"
+    . "نام مشتری: " . (string) ($cd['customer'] ?? '') . "\n"
+    . "محصول: " . (string) ($cd['product'] ?? '') . "\n"
+    . "لوکیشن: " . (string) ($cd['panel'] ?? '') . "\n"
+    . "مبلغ پرداختی: " . nx_num((float) ($cd['price'] ?? 0)) . " تومان";
+if ($cdLink !== '') {
+    $cdText .= "\nلینک اتصال: " . $cdLink;
+}
+if ($cdConfigs) {
+    $cdText .= "\nکانفیگ‌ها:\n" . implode("\n", $cdConfigs);
+}
+?>
+<!-- the window of the service that was just made (it is open right away: the
+     details of the service must never be lost) -->
+<div class="nx-lux-bk" id="nx-created-modal">
+  <div class="nx-lux" onclick="event.stopPropagation()">
+    <div class="nx-lux-head">
+      <span class="ic">✅</span>
+      <div>
+        <h2>سرویس ساخته شد</h2>
+        <p>مشخصات اتصال را کپی کنید و به مشتری بدهید</p>
+      </div>
+      <button type="button" class="x" onclick="nxCloseCreated()" aria-label="بستن">✕</button>
+    </div>
+    <div class="nx-lux-body" id="nx-created-body">
+      <div class="nx-lux-grid">
+        <div class="nx-lux-item"><span>نام کاربری سرویس</span><b class="mono"><?= htmlspecialchars((string) ($cd['username'] ?? '—'), ENT_QUOTES, 'UTF-8') ?></b></div>
+        <div class="nx-lux-item"><span>نام مشتری</span><b><?= htmlspecialchars((string) ($cd['customer'] ?? '—'), ENT_QUOTES, 'UTF-8') ?></b></div>
+        <div class="nx-lux-item"><span>محصول</span><b><?= htmlspecialchars((string) ($cd['product'] ?? '—'), ENT_QUOTES, 'UTF-8') ?></b></div>
+        <div class="nx-lux-item"><span>لوکیشن</span><b><?= htmlspecialchars((string) ($cd['panel'] ?? '—'), ENT_QUOTES, 'UTF-8') ?></b></div>
+        <div class="nx-lux-item full"><span>مبلغ پرداختی</span><b><?= nx_num((float) ($cd['price'] ?? 0)) ?> تومان</b></div>
+      </div>
+      <?php if ($cdLink !== ''): ?>
+        <div class="nx-lux-sub">لینک اتصال</div>
+        <div class="nx-lux-code">
+          <button type="button" class="cp" onclick="nxCopy(this)">📋 کپی</button>
+          <code><?= htmlspecialchars($cdLink, ENT_QUOTES, 'UTF-8') ?></code>
+        </div>
+      <?php endif; ?>
+      <?php if ($cdConfigs): ?>
+        <div class="nx-lux-sub">کانفیگ‌ها</div>
+        <?php foreach ($cdConfigs as $cdConfig): ?>
+          <div class="nx-lux-code">
+            <button type="button" class="cp" onclick="nxCopy(this)">📋 کپی</button>
+            <code><?= htmlspecialchars($cdConfig, ENT_QUOTES, 'UTF-8') ?></code>
+          </div>
+        <?php endforeach; ?>
+      <?php endif; ?>
+      <?php if ($cdLink === '' && !$cdConfigs): ?>
+        <div class="nx-lux-empty">این پنل لینک اتصال نمی‌دهد؛ نام کاربری سرویس را به مشتری بدهید.</div>
+      <?php endif; ?>
+    </div>
+    <div class="nx-lux-foot">
+      <button type="button" class="rs-btn lux" onclick="nxCopyAllCreated()">📋 کپی همه</button>
+      <button type="button" class="rs-btn ghost" onclick="nxCloseCreated()">بستن</button>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
+<script>
+  // The panel needs the token of the session to ask the server for the
+  // details of a user (the window of the panel is filled with the answer).
+  window.NX_AGENT = {
+    csrf: <?= json_encode(nx_agent_csrf_token()) ?>,
+    info: 'customer-info.php',
+    createdText: <?= json_encode((string) ($cdText ?? ''), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>
+  };
+  <?php if ($created): ?>
+  // The window of the service that was just made opens right away.
+  window.addEventListener('DOMContentLoaded', function () { window.nxOpenCreated(); });
+  <?php endif; ?>
+</script>
 <script>
   // The order of the agent: a product is chosen, the name of the customer is
   // written down and the wallet of the agent pays for the service. A random
@@ -548,6 +668,7 @@ Token: <?= htmlspecialchars($apiToken) ?>
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') nxCloseBuy(); });
   });
 </script>
+<script src="panel-ui.js?v=1" defer></script>
 <script src="beauty.js?v=7" defer></script>
 <script src="mobile.js?v=11" defer></script>
 </body>

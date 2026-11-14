@@ -193,16 +193,19 @@ if (!function_exists('nx_agent_palette')) {
     /**
      * The colours of the categories. Every category gets its own colour, the
      * same way the site of Nexora gives every country its own accent.
+     *
+     * The colours are dark enough to be read on the light glass of the panel
+     * (the white text of a button on them is readable as well).
      */
     function nx_agent_palette(): array
     {
         return [
-            ['c' => '#0e9488', 'rgb' => '14,148,136', 'c2' => '#0a6e65', 'e' => '📦'],
-            ['c' => '#1d7ff2', 'rgb' => '29,127,242', 'c2' => '#1557b0', 'e' => '🌐'],
-            ['c' => '#7c3aed', 'rgb' => '124,58,237', 'c2' => '#5b21b6', 'e' => '💎'],
-            ['c' => '#f59e0b', 'rgb' => '245,158,11', 'c2' => '#b45309', 'e' => '⭐'],
-            ['c' => '#e0405a', 'rgb' => '224,64,90', 'c2' => '#a52a3e', 'e' => '🔥'],
-            ['c' => '#16a34a', 'rgb' => '22,163,74', 'c2' => '#0a7a38', 'e' => '🚀'],
+            ['c' => '#0b7f76', 'rgb' => '11,127,118', 'c2' => '#075a53', 'e' => '📦'],
+            ['c' => '#1668c9', 'rgb' => '22,104,201', 'c2' => '#0e4a91', 'e' => '🌐'],
+            ['c' => '#6d28d9', 'rgb' => '109,40,217', 'c2' => '#4c1d95', 'e' => '💎'],
+            ['c' => '#b45309', 'rgb' => '180,83,9', 'c2' => '#7c3a06', 'e' => '⭐'],
+            ['c' => '#be123c', 'rgb' => '190,18,60', 'c2' => '#8a1030', 'e' => '🔥'],
+            ['c' => '#15803d', 'rgb' => '21,128,61', 'c2' => '#0d5c2e', 'e' => '🚀'],
         ];
     }
 }
@@ -473,6 +476,172 @@ if (!function_exists('nx_agent_panel_candidates')) {
             }
         }
         return $candidates;
+    }
+}
+
+if (!function_exists('nx_agent_customer_services')) {
+    /**
+     * The services of a customer of the agent (the invoices of the customer).
+     *
+     * The list is the newest first and it is never longer than 200 rows, so
+     * the window of the panel never grows without an end.
+     */
+    function nx_agent_customer_services(PDO $pdo, string $customerId): array
+    {
+        $customerId = trim($customerId);
+        if ($customerId === '') {
+            return [];
+        }
+        try {
+            $st = $pdo->prepare("SELECT id_invoice, username, Service_location, name_product, price_product, Volume, Service_time, Status, time_sell, note FROM invoice WHERE id_user = ? ORDER BY time_sell DESC LIMIT 200");
+            $st->execute([$customerId]);
+            return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            error_log('nx_agent_customer_services: ' . $e->getMessage());
+            return [];
+        }
+    }
+}
+
+if (!function_exists('nx_agent_service_links')) {
+    /**
+     * The link and the configs of a service that already exists.
+     *
+     * The panel is asked with the very same helper the bot uses, so the link
+     * of a service is the real one and not a guess. A panel that does not
+     * answer never breaks the window of the panel: the error is shown in the
+     * place of the link.
+     *
+     * @return array{ok:bool,subscription_url:string,links:array,msg:string}
+     */
+    function nx_agent_service_links($ManagePanel, string $panelName, string $username): array
+    {
+        $out = ['ok' => false, 'subscription_url' => '', 'links' => [], 'msg' => ''];
+        $panelName = trim($panelName);
+        $username = trim($username);
+        if ($panelName === '' || $username === '') {
+            $out['msg'] = 'نام پنل یا نام کاربری سرویس خالی است.';
+            return $out;
+        }
+        try {
+            $info = $ManagePanel->DataUser($panelName, $username);
+        } catch (Throwable $e) {
+            error_log('nx_agent_service_links: ' . $e->getMessage());
+            $out['msg'] = 'پنل جواب نداد.';
+            return $out;
+        }
+        if (!is_array($info)) {
+            $out['msg'] = 'پنل جواب نداد.';
+            return $out;
+        }
+        if (trim((string) ($info['status'] ?? '')) === 'Unsuccessful') {
+            $out['msg'] = trim((string) ($info['msg'] ?? 'این سرویس روی پنل پیدا نشد.'));
+            return $out;
+        }
+        $links = [];
+        $raw = $info['links'] ?? ($info['configs'] ?? []);
+        if (!is_array($raw)) {
+            $raw = explode("\n", (string) $raw);
+        }
+        foreach ($raw as $link) {
+            $link = trim((string) $link);
+            if ($link !== '') {
+                $links[] = $link;
+            }
+        }
+        $out['ok'] = true;
+        $out['subscription_url'] = trim((string) ($info['subscription_url'] ?? ''));
+        $out['links'] = $links;
+        if ($out['subscription_url'] === '' && !$links) {
+            $out['msg'] = 'این پنل لینک اتصال نمی‌دهد.';
+        }
+        return $out;
+    }
+}
+
+if (!function_exists('nx_agent_customer_report')) {
+    /**
+     * The report of a customer of the agent: the row of the bot, the services
+     * of the customer and (when they are asked for) the links of the services.
+     *
+     * The customer has to belong to the agent: the row of the bot carries the
+     * id of the agent in the column "affiliates". A customer of another agent
+     * is never answered, so nothing of him can be seen from this panel.
+     *
+     * @return array{ok:bool,msg:string,customer:array,services:array}
+     */
+    function nx_agent_customer_report(PDO $pdo, $ManagePanel, array $agent, string $customerId, bool $withLinks = false): array
+    {
+        $out = ['ok' => false, 'msg' => '', 'customer' => [], 'services' => []];
+        $agentId = trim((string) ($agent['id'] ?? ''));
+        $customerId = trim($customerId);
+        if ($agentId === '' || $customerId === '') {
+            $out['msg'] = 'کاربر انتخاب نشده است.';
+            return $out;
+        }
+        try {
+            $st = $pdo->prepare("SELECT id, username, Balance, register FROM `user` WHERE id = ? AND affiliates = ? LIMIT 1");
+            $st->execute([$customerId, $agentId]);
+            $customer = $st->fetch(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            error_log('nx_agent_customer_report: ' . $e->getMessage());
+            $out['msg'] = 'دیتابیس جواب نداد.';
+            return $out;
+        }
+        if (!is_array($customer) || !$customer) {
+            $out['msg'] = 'این کاربر در پنل شما نیست.';
+            return $out;
+        }
+        $services = nx_agent_customer_services($pdo, $customerId);
+        // The links are only asked for when the window needs them: every link
+        // is a call to a panel, so they are never fetched without a reason.
+        $budget = 20;
+        $started = time();
+        $list = [];
+        foreach ($services as $svc) {
+            $item = [
+                'username' => (string) ($svc['username'] ?? ''),
+                'product' => nx_agent_plain_name((string) ($svc['name_product'] ?? '')),
+                'panel' => (string) ($svc['Service_location'] ?? ''),
+                'price' => (float) ($svc['price_product'] ?? 0),
+                'volume' => (float) ($svc['Volume'] ?? 0),
+                'days' => (int) ($svc['Service_time'] ?? 0),
+                'status' => (string) ($svc['Status'] ?? ''),
+                // The time of the sale is sometimes a number and sometimes a
+                // date that is already written: both are kept as they are.
+                'time' => is_numeric($svc['time_sell'] ?? null) ? (int) $svc['time_sell'] : (string) ($svc['time_sell'] ?? ''),
+                'note' => (string) ($svc['note'] ?? ''),
+                'link' => '',
+                'links' => [],
+                'error' => '',
+            ];
+            if ($withLinks && $item['username'] !== '') {
+                if ((time() - $started) >= $budget) {
+                    $item['error'] = 'زمان پاسخ تمام شد؛ لینک این سرویس گرفته نشد.';
+                } else {
+                    $res = nx_agent_service_links($ManagePanel, $item['panel'], $item['username']);
+                    if (!empty($res['ok'])) {
+                        $item['link'] = (string) $res['subscription_url'];
+                        $item['links'] = (array) $res['links'];
+                        if (!empty($res['msg'])) {
+                            $item['error'] = (string) $res['msg'];
+                        }
+                    } else {
+                        $item['error'] = (string) $res['msg'];
+                    }
+                }
+            }
+            $list[] = $item;
+        }
+        $out['ok'] = true;
+        $out['customer'] = [
+            'id' => (string) ($customer['id'] ?? ''),
+            'username' => (string) ($customer['username'] ?? ''),
+            'balance' => (float) ($customer['Balance'] ?? 0),
+            'register' => (int) ($customer['register'] ?? 0),
+        ];
+        $out['services'] = $list;
+        return $out;
     }
 }
 

@@ -12,6 +12,30 @@ Phase 10 — The reseller shop is a manual shop (no panel, no wallet), every ans
 gets a reaction and the bot is faster on a small server.
 
 ## Last successful checkpoint
+**v1.22.86** — the agent panel reads well, the details of a user open in a luxury window and the link of a service is one click away:
+- the glass of the agent panel is thick enough now (86% white in the light theme, 82% dark in the
+  dark one) and the letters are darker (`#08161f` / `#3d5a6b`), so the background picture can never
+  swallow a letter; the lines of the tables, the chips and the pills got their own colours and the
+  colours of the categories of the shop are darker now;
+- the fields of the login page keep their dark look (they sit on a dark card — before the change
+  they had dark letters on a dark field);
+- the tab "مدیریت کاربران" has a new column "لینک اتصال": the button "🔗 نمایش لینک" asks the
+  panel for the link and the configs of every service of that customer and shows them in a luxury
+  window (each of them with a copy button);
+- the name of a user is a button now: it opens a **read only** luxury window with the details of
+  the user and the list of his services (product, panel, volume, duration, price, state, date);
+- after a buy the details of the new service open in a luxury window right away (the name of the
+  user, the name of the customer, the product, the location, the price, the link and the configs,
+  with a "copy all" button). The page is loaded again with a GET after the buy, so a refresh never
+  buys the same product twice;
+- the new file `agent-panel/customer-info.php` answers with the details of a customer (JSON). It
+  only reads: a customer that does not belong to the agent is never answered. The panels are only
+  asked for the links when they are really needed and the answer never waits longer than 20 seconds;
+- the windows never hide themselves: the movement only moves them, so a browser that pauses the
+  movement (a window in the background) still shows the whole window;
+- tested: 19 checks of the report of a customer (sqlite, green), 4 phases of the window in the
+  browser (green), `php -l` clean on every changed file, `node --check` clean on the new script.
+
 **v1.22.84** — the premium emoji of the shops is applied and the pie charts of the reports are drawn right:
 - the code of an emoji (`{emoji:tun}`) is opened by `nexora_emoji_lookup()`, so the emoji of the reseller
   shop, the top up, the agent panel, the test service, the buttons, the categories and the panels is

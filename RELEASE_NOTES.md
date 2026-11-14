@@ -1,5 +1,28 @@
 # Nexora Bot — Release Notes
 
+## v1.22.86 (2026-11-14) — The agent panel reads well, the details of a user open in a luxury window and the link of a service is one click away
+
+**The letters of the agent panel are readable now**
+- The panels of the agent were almost transparent: the picture of the background showed through the glass, so a dark letter on a dark part of the picture could not be read at all.
+- The glass is thicker now (the cards, the menu and the windows are 86% white in the light theme and 82% dark in the dark theme), the letters are darker (`#08161f`) and the second colour of the text is darker too (`#3d5a6b`). The picture is still visible behind the panels, but it never fights with the letters any more.
+- The lines of the tables, the chips and the pills got their own colours, so the rows can be told apart.
+- The colours of the categories of the shop are darker now (the teal, the blue, the violet, the amber, the red and the green), so the name of a product and its price can be read on the glass.
+- The fields of the login page keep their dark look (they are on a dark card): before the change they had dark letters on a dark field.
+
+**The users of the agent (the tab "مدیریت کاربران")**
+- A new column: "لینک اتصال". The button "🔗 نمایش لینک" asks the panel for the link of every service of that customer and shows it in the luxury window (the link of the subscription and the configs), with a button that copies each one of them.
+- The name of the user is a button now: it opens a luxury window with the details of the user (the id, the balance, the date of the membership, the number of the services and the panels of the services) and the list of his services (the product, the panel, the volume, the duration, the price, the state and the date of every service).
+- The window is **read only**: nothing can be changed from it. The date of the registration is a real date now and not the number of seconds since 1970.
+
+**The account that was just made**
+- The details of a new service (the name of the user, the name of the customer, the product, the location, the price, the link and the configs) open in a luxury window right after the buy, with a button that copies everything the customer needs.
+- The page is loaded again with a GET after the buy (the details wait in the session for ten minutes), so a refresh of the page never buys the same product a second time.
+
+**The new file**
+- `agent-panel/customer-info.php` answers with the details of a customer of the agent (JSON). It only reads: a customer that does not belong to the agent is never answered, so the services of another agent can not be seen from here. The panel is only asked for the links when they are really needed and the answer never waits longer than twenty seconds.
+
+---
+
 ## v1.22.85 (2026-11-14) — A broken keyboard never takes the answer of the bot away from the customer any more
 
 - Telegram wants the rows of a keyboard (an array of arrays of buttons). When a button is built without a row or a row is empty, Telegram refuses the whole message with the error 400 and the customer never gets an answer from the bot.

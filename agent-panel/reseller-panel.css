@@ -1,22 +1,27 @@
 /* Nexora reseller panel — light glassy app, RTL. Accent via --acc, dark via [data-dark="1"]. */
+/* The text of the panel must always be readable: the panels are glassy, but
+   they are never so transparent that the picture behind them can swallow a
+   letter. The colours below are picked for a high contrast. */
 :root{
-  --acc:#0e9488; --acc-soft:rgba(14,148,136,.12); --acc-line:rgba(14,148,136,.4);
-  --bg:rgba(255,255,255,.16); --card:rgba(255,255,255,.12); --ink:#10222b; --muted:#4c6575; --line:rgba(255,255,255,.5);
-  --green:#16a34a; --orange:#f59e0b; --red:#e0405a; --gray:#94a3b8;
-  --shadow:0 10px 30px rgba(16,34,43,.12);
+  --acc:#0b7f76; --acc-soft:rgba(11,127,118,.13); --acc-line:rgba(11,127,118,.45);
+  --bg:rgba(255,255,255,.68); --card:rgba(255,255,255,.86); --ink:#08161f; --muted:#3d5a6b; --line:rgba(9,48,70,.16);
+  --green:#15803d; --orange:#b45309; --red:#be123c; --gray:#5b7183;
+  --gold:#e9b53c; --gold-soft:rgba(233,181,60,.16);
+  --shadow:0 12px 34px rgba(8,32,48,.16);
 }
-[data-theme="blue"]{--acc:#1d7ff2;--acc-soft:rgba(29,127,242,.12);--acc-line:rgba(29,127,242,.4)}
-[data-theme="purple"]{--acc:#7c3aed;--acc-soft:rgba(124,58,237,.12);--acc-line:rgba(124,58,237,.4)}
-[data-theme="green"]{--acc:#16a34a;--acc-soft:rgba(22,163,74,.12);--acc-line:rgba(22,163,74,.4)}
-[data-theme="orange"]{--acc:#ea7c28;--acc-soft:rgba(234,124,40,.13);--acc-line:rgba(234,124,40,.45)}
-[data-dark="1"]{--bg:rgba(255,255,255,.07);--card:rgba(12,22,35,.42);--ink:#e8f4f9;--muted:#8aa5b5;--line:rgba(140,200,230,.3);--shadow:0 12px 34px rgba(0,0,0,.45)}
+[data-theme="blue"]{--acc:#1668c9;--acc-soft:rgba(22,104,201,.13);--acc-line:rgba(22,104,201,.45)}
+[data-theme="purple"]{--acc:#6d28d9;--acc-soft:rgba(109,40,217,.13);--acc-line:rgba(109,40,217,.45)}
+[data-theme="green"]{--acc:#15803d;--acc-soft:rgba(21,128,61,.13);--acc-line:rgba(21,128,61,.45)}
+[data-theme="orange"]{--acc:#c2610c;--acc-soft:rgba(194,97,12,.14);--acc-line:rgba(194,97,12,.48)}
+[data-dark="1"]{--bg:rgba(255,255,255,.08);--card:rgba(8,18,29,.82);--ink:#f2f9fd;--muted:#a9c6d6;--line:rgba(140,200,230,.26);--shadow:0 16px 42px rgba(0,0,0,.5)}
 [hidden]{display:none!important}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;min-height:100vh;background:linear-gradient(rgba(235,242,247,.42),rgba(235,242,247,.42)),url('assets/home-background.png') center/cover fixed;color:var(--ink);font-family:Vazirmatn,tahoma,Arial,sans-serif;transition:background .3s}
-[data-dark="1"] body,body[data-dark="1"]{background:linear-gradient(rgba(4,10,20,.5),rgba(4,10,20,.5)),url('assets/home-background.png') center/cover fixed}
-/* glass-everywhere: 2/3 transparency, backdrop visible through */
-.stat,.card,.rs-side,.modal,.menu-pop,.rs-login,.sw{backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%)}
+body{margin:0;min-height:100vh;background:linear-gradient(rgba(228,240,248,.66),rgba(206,228,242,.72)),url('assets/home-background.png') center/cover fixed;color:var(--ink);font-family:Vazirmatn,tahoma,Arial,sans-serif;transition:background .3s}
+[data-dark="1"] body,body[data-dark="1"]{background:linear-gradient(rgba(4,10,20,.62),rgba(3,8,16,.68)),url('assets/home-background.png') center/cover fixed}
+/* glass-everywhere: the picture stays visible, but it is never sharp enough to
+   fight with the letters of the panel */
+.stat,.card,.rs-side,.modal,.menu-pop,.rs-login,.sw{backdrop-filter:blur(24px) saturate(165%);-webkit-backdrop-filter:blur(24px) saturate(165%)}
 /* ---------- login (luxury, home artwork behind) ---------- */
 .rs-login-wrap{min-height:100vh;display:grid;place-items:center;padding:20px;background:linear-gradient(rgba(2,8,20,.55),rgba(2,8,20,.68)),url('assets/home-background.png') center/cover fixed}
 .rs-login{position:relative;width:min(430px,100%);background:rgba(6,15,27,.3);border:1px solid rgba(255,255,255,.35);border-radius:26px;padding:40px 34px 30px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 30px 90px rgba(0,0,0,.5);text-align:center;overflow:hidden;color:#eef7fc}
@@ -38,8 +43,12 @@ body{margin:0;min-height:100vh;background:linear-gradient(rgba(235,242,247,.42),
 .rs-login input::placeholder{color:#6f8fa3}
 .rs-login .rs-err{color:#ff9aab}
 .rs-login label{display:block;text-align:right;font-size:12px;font-weight:700;margin-bottom:12px}
-.rs-login input{width:100%;margin-top:6px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);padding:12px;font:inherit;font-size:13px;outline:none}
+/* the fields of the login keep their own dark look: the card of the login is
+   dark, so the fields are dark too (the colours of the panel are for a light
+   background) */
+.rs-login input{width:100%;margin-top:6px;border:1px solid rgba(140,200,230,.38);border-radius:12px;background:rgba(2,10,26,.55);color:#eef7fc;padding:12px;font:inherit;font-size:13px;outline:none}
 .rs-login input:focus{border-color:var(--acc);box-shadow:0 0 0 4px var(--acc-soft)}
+.rs-login input::placeholder{color:#7f9db0}
 .rs-err{min-height:18px;color:var(--red);font-size:12px;margin:4px 0 8px}
 .rs-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:12px 26px;background:var(--acc);color:#fff;font:800 13.5px Vazirmatn;cursor:pointer;box-shadow:0 10px 24px var(--acc-soft);transition:.2s}
 .rs-btn:hover{filter:brightness(1.07);transform:translateY(-1px)}
@@ -176,7 +185,8 @@ pre.api{background:#0b1520;color:#bfe3c8;border-radius:14px;padding:16px;font:12
 .shop-col .shop-grid{grid-template-columns:1fr}
 @media(max-width:1100px){.shop-cols{grid-template-columns:1fr}}
 .shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
-.shop-card{position:relative;overflow:hidden;border:1px solid rgba(var(--lcrgb,14,148,136),.45);border-radius:20px;padding:18px;background:linear-gradient(165deg,rgba(var(--lcrgb,14,148,136),.18),rgba(var(--lcrgb,14,148,136),.04));backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 14px 34px rgba(0,0,0,.12);transition:transform .22s ease,box-shadow .25s ease}
+.shop-card{position:relative;overflow:hidden;border:1px solid rgba(var(--lcrgb,14,148,136),.45);border-radius:20px;padding:18px;background:linear-gradient(165deg,rgba(var(--lcrgb,14,148,136),.16),rgba(var(--lcrgb,14,148,136),.03)),rgba(255,255,255,.9);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 14px 34px rgba(8,32,48,.16);transition:transform .22s ease,box-shadow .25s ease}
+[data-dark="1"] .shop-card{background:linear-gradient(165deg,rgba(var(--lcrgb,14,148,136),.22),rgba(var(--lcrgb,14,148,136),.05)),rgba(8,18,29,.86);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 16px 38px rgba(0,0,0,.45)}
 .shop-card:before{content:"";position:absolute;top:-40px;left:-40px;width:130px;height:130px;border-radius:50%;background:radial-gradient(circle,rgba(var(--lcrgb,14,148,136),.35),transparent 70%);pointer-events:none}
 .shop-card:hover{transform:translateY(-5px);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 20px 48px rgba(var(--lcrgb,14,148,136),.38)}
 .shop-card:after{content:"";position:absolute;top:0;bottom:0;left:-70%;width:45%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent);transform:skewX(-18deg);transition:left .7s ease;pointer-events:none}
@@ -209,16 +219,18 @@ pre.api{background:#0b1520;color:#bfe3c8;border-radius:14px;padding:16px;font:12
 .shop-card b{overflow-wrap:anywhere}
 .shop-card .vol{line-height:1.9}
 .shop-card .rs-btn.lux{background:linear-gradient(135deg,var(--lc,var(--acc)),var(--lc2,var(--acc)));color:#fff;box-shadow:0 10px 24px rgba(var(--lcrgb,14,148,136),.45),inset 0 1px 0 rgba(255,255,255,.35)}
-.nx-flash{border-radius:16px;padding:14px 16px;margin-bottom:16px;font-size:13px;border:1px solid var(--line);background:var(--card);animation:nxRise .4s ease both}
-.nx-flash-success{border-color:rgba(22,163,74,.5);background:rgba(22,163,74,.12);color:#0f7a38}
-.nx-flash-error{border-color:rgba(224,64,90,.5);background:rgba(224,64,90,.12);color:#b31f3c}
+.nx-flash{border-radius:16px;padding:14px 16px;margin-bottom:16px;font-size:13px;font-weight:700;border:1px solid var(--line);background:var(--card);animation:nxRise .4s ease both}
+.nx-flash-success{border-color:rgba(21,128,61,.55);background:rgba(21,128,61,.12);color:#14532d}
+.nx-flash-error{border-color:rgba(190,18,60,.5);background:rgba(190,18,60,.1);color:#9f1239}
+[data-dark="1"] .nx-flash-success{color:#86efac}
+[data-dark="1"] .nx-flash-error{color:#fda4af}
 .nx-flash-detail{margin-top:10px;color:var(--ink)}
 .nx-flash-configs{margin:10px 0;padding:10px 12px;border:1px dashed var(--line);border-radius:14px;background:var(--bg)}
 .nx-flash-label{display:block;color:var(--muted);font-size:11.5px;margin-bottom:6px}
 .nx-flash-config{display:block;direction:ltr;text-align:left;word-break:break-all;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.9;color:var(--ink);white-space:pre-wrap}
 .nx-chip{display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:var(--bg);font-size:11.5px;direction:ltr}
 .nx-hint{display:block;margin:-4px 0 14px;color:var(--muted);font-size:11.5px;line-height:1.9}
-@media(prefers-reduced-motion:reduce){.nx-in,.shop-cats,.nx-flash{animation:none}}
+@media(prefers-reduced-motion:reduce){.nx-in,.shop-cats,.nx-flash,.nx-lux,.nx-lux-bk{animation:none}}
 /* ---------- credential result ---------- */
 .cred-card{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;border:1px dashed var(--acc-line);border-radius:16px;padding:16px;background:var(--acc-soft)}
 .qr-box{width:150px;height:150px;flex:0 0 auto;border-radius:14px;background:#fff;display:grid;place-items:center;overflow:hidden;color:var(--muted);font-size:11px;text-align:center}
@@ -291,4 +303,79 @@ svg.chart{width:100%;height:auto;display:block}
 @media(max-width:480px){
   .rs-stats{grid-template-columns:1fr 1fr}
   .kpi-grid{grid-template-columns:1fr 1fr}
+}
+
+/* ==========================================================================
+   The luxury window: the details of a user, the links of the services and the
+   account that was just made. The window is a glass card with a golden edge:
+   the letters are always dark on a light glass (and light on a dark one), so
+   everything can be read without squinting.
+   ========================================================================== */
+.nx-lux-bk{position:fixed;inset:0;z-index:120;background:rgba(4,12,22,.58);backdrop-filter:blur(10px) saturate(140%);-webkit-backdrop-filter:blur(10px) saturate(140%);display:grid;place-items:center;padding:18px;animation:nxFade .22s ease both}
+/* The windows never hide themselves: the movement only moves them, so a
+   browser that pauses the movement (a window in the background) still shows
+   the whole window. */
+@keyframes nxFade{from{opacity:.55}to{opacity:1}}
+.nx-lux{position:relative;width:min(720px,100%);max-height:92vh;overflow-y:auto;overflow-x:hidden;background:linear-gradient(180deg,rgba(255,255,255,.97),rgba(243,249,253,.95));border-radius:24px;padding:0;box-shadow:0 44px 110px rgba(4,14,24,.5),inset 0 1px 0 rgba(255,255,255,.9);animation:nxPop .3s cubic-bezier(.22,.9,.3,1) both;color:var(--ink)}
+[data-dark="1"] .nx-lux{background:linear-gradient(180deg,rgba(13,26,39,.96),rgba(8,16,26,.94));box-shadow:0 44px 110px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.12)}
+@keyframes nxPop{from{transform:translateY(26px) scale(.97)}to{transform:none}}
+.nx-lux:before{content:"";position:absolute;inset:0;border-radius:24px;padding:1.5px;background:linear-gradient(135deg,#f7d17a,#e9b53c 32%,#0e9488 66%,#7c3aed);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;z-index:2}
+.nx-lux-head{display:flex;align-items:center;gap:13px;padding:20px 22px 15px;border-bottom:1px solid rgba(9,48,70,.13)}
+[data-dark="1"] .nx-lux-head{border-bottom-color:rgba(140,200,230,.18)}
+.nx-lux-head .ic{width:48px;height:48px;flex:0 0 auto;display:grid;place-items:center;border-radius:16px;font-size:22px;background:linear-gradient(135deg,rgba(233,181,60,.3),rgba(14,148,136,.24));border:1px solid rgba(233,181,60,.5);box-shadow:0 10px 24px rgba(180,120,20,.22)}
+.nx-lux-head h2{margin:0;font-size:17px;font-weight:900}
+.nx-lux-head p{margin:3px 0 0;font-size:12.5px;color:var(--muted)}
+.nx-lux-head .x{margin-inline-start:auto;width:34px;height:34px;flex:0 0 auto;border-radius:11px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:15px;cursor:pointer;display:grid;place-items:center;transition:.15s}
+.nx-lux-head .x:hover{border-color:var(--acc);color:var(--acc)}
+.nx-lux-body{padding:18px 22px 20px}
+.nx-lux-foot{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:0 22px 22px}
+.nx-lux-foot .sp{flex:1}
+/* the pairs of the window: the name on the right, the value on the left */
+.nx-lux-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.nx-lux-item{border:1px solid var(--line);border-radius:14px;padding:11px 13px;background:var(--bg);min-width:0}
+.nx-lux-item.full{grid-column:1/-1}
+.nx-lux-item span{display:block;font-size:11px;font-weight:800;color:var(--muted);margin-bottom:4px}
+.nx-lux-item b{display:block;font-size:13.5px;font-weight:800;word-break:break-word;line-height:1.8}
+.nx-lux-item b.mono{direction:ltr;text-align:left;font-family:Consolas,monospace;font-size:12px}
+/* a link or a config of the service: the band on top of the box holds the
+   name of the link and the button that copies it */
+.nx-lux-code{position:relative;margin:8px 0 0;border:1px solid var(--line);border-radius:13px;background:rgba(8,24,36,.94);padding:36px 13px 12px;direction:ltr;text-align:left}
+.nx-lux-code code{display:block;font:11.5px/2 ui-monospace,Menlo,Consolas,monospace;color:#d8f3e4;white-space:pre-wrap;word-break:break-all}
+.nx-lux-code .cp{position:absolute;top:6px;left:7px;border:1px solid rgba(233,181,60,.45);background:rgba(233,181,60,.16);color:#ffe6ab;border-radius:9px;padding:3px 9px;font:800 10.5px Vazirmatn;cursor:pointer}
+.nx-lux-code .cp:hover{background:rgba(233,181,60,.3)}
+.nx-lux-code .lb{position:absolute;top:9px;right:13px;max-width:calc(100% - 96px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:right;font:800 10.5px Vazirmatn;color:#9fd8ff}
+.nx-lux-sub{margin:16px 0 2px;font-size:13px;font-weight:900;display:flex;align-items:center;gap:8px}
+.nx-lux-sub:before{content:"";width:5px;height:18px;border-radius:3px;background:linear-gradient(180deg,var(--gold),transparent);box-shadow:0 0 10px rgba(233,181,60,.6)}
+.nx-lux-note{margin:10px 0 0;font-size:12px;line-height:2;color:var(--muted)}
+.nx-lux-empty{margin:10px 0 0;border:1px dashed var(--line);border-radius:14px;padding:16px;text-align:center;color:var(--muted);font-size:12.5px}
+.nx-lux-wait{display:flex;align-items:center;justify-content:center;gap:10px;padding:26px 0;color:var(--muted);font-size:13px}
+.nx-lux-wait .spin{width:20px;height:20px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--acc);animation:nxSpin .8s linear infinite}
+@keyframes nxSpin{to{transform:rotate(360deg)}}
+/* the service of a customer, in the window */
+.nx-svc{border:1px solid var(--line);border-radius:16px;padding:13px;margin-top:10px;background:var(--bg)}
+.nx-svc .top{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:8px}
+.nx-svc .top b{font-size:13.5px;font-weight:900}
+.nx-svc .top .mono{font-size:11.5px;color:var(--muted)}
+.nx-svc .top .sp{flex:1}
+.nx-svc .lnk{font-size:12px;color:var(--muted);margin-top:6px}
+.nx-svc .lnk b{color:var(--ink);font-weight:800}
+/* the row of a user in the table of the users */
+.nx-user-btn{display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:12px;padding:7px 11px;cursor:pointer;font:inherit;text-align:right;transition:.16s;max-width:100%}
+.nx-user-btn:hover{border-color:var(--acc);box-shadow:0 8px 20px var(--acc-soft);transform:translateY(-1px)}
+.nx-user-btn b{font-size:13px;font-weight:900}
+.nx-user-btn small{font-size:10.5px;color:var(--muted);direction:ltr;font-family:Consolas,monospace}
+/* the button that shows the link of the services */
+.nx-link-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--acc-line);background:var(--acc-soft);color:var(--acc);border-radius:11px;padding:7px 12px;font:800 12px Vazirmatn;cursor:pointer;transition:.16s;white-space:nowrap}
+.nx-link-btn:hover{background:var(--acc);color:#fff;box-shadow:0 10px 22px var(--acc-soft)}
+.nx-link-btn[disabled]{opacity:.6;cursor:wait}
+/* the copy of a text in the window */
+.nx-toast{position:fixed;z-index:200;bottom:22px;left:50%;transform:translateX(-50%);background:rgba(6,18,28,.94);color:#eaf6fc;border:1px solid rgba(233,181,60,.45);border-radius:12px;padding:10px 18px;font:800 12.5px Vazirmatn;box-shadow:0 18px 44px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:.25s}
+.nx-toast.on{opacity:1;transform:translateX(-50%) translateY(-6px)}
+@media(max-width:900px){
+  .nx-lux-bk{padding:0;align-items:flex-end}
+  .nx-lux{width:100%;max-height:94vh;border-radius:24px 24px 0 0}
+  .nx-lux-grid{grid-template-columns:1fr}
+  .nx-lux-head{padding:16px 16px 12px}
+  .nx-lux-body{padding:14px 16px 16px}
+  .nx-lux-foot{padding:0 16px 18px}
 }
