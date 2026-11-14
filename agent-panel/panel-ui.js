@@ -136,9 +136,22 @@
 
     var url = (CFG.info || 'customer-info.php') + '?customer=' + encodeURIComponent(id) +
       '&_csrf=' + encodeURIComponent(CFG.csrf || '') + (withLinks ? '&links=1' : '');
-    fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+    // The server waits at most twenty seconds for the panels: the window never
+    // waits longer than that, so the agent is never left with a spinner.
+    var ctrl = null;
+    var timer = 0;
+    if (typeof AbortController !== 'undefined') {
+      ctrl = new AbortController();
+      timer = window.setTimeout(function () {
+        try { ctrl.abort(); } catch (e) {}
+      }, 45000);
+    }
+    var options = { credentials: 'same-origin', headers: { 'Accept': 'application/json' } };
+    if (ctrl) { options.signal = ctrl.signal; }
+    fetch(url, options)
       .then(function (r) { return r.json().catch(function () { return { ok: false, msg: 'پاسخ سرور خوانده نشد.' }; }); })
       .then(function (data) {
+        window.clearTimeout(timer);
         loading = false;
         if (!data || !data.ok) {
           if (body) body.innerHTML = '<div class="nx-lux-empty">❌ ' + esc((data && data.msg) ? data.msg : 'اطلاعات خوانده نشد.') + '</div>';
@@ -147,8 +160,9 @@
         if (body) body.innerHTML = renderCustomer(data, !!withLinks);
       })
       .catch(function () {
+        window.clearTimeout(timer);
         loading = false;
-        if (body) body.innerHTML = '<div class="nx-lux-empty">❌ ارتباط با سرور برقرار نشد. دوباره تلاش کنید.</div>';
+        if (body) body.innerHTML = '<div class="nx-lux-empty">❌ ارتباط با سرور برقرار نشد (یا زمان پاسخ تمام شد). دوباره تلاش کنید.</div>';
       });
   }
 
@@ -229,6 +243,7 @@
   function closeCustomer() {
     var modal = customerModal();
     if (modal) modal.hidden = true;
+    loading = false;
     document.body.style.overflow = '';
   }
 
