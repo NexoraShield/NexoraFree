@@ -440,6 +440,18 @@ function mini_countries(array $data, string $method): void
                 'is_note' => $is_note
             ];
         }
+        // The test services have their own section of the web application. The
+        // test products are never mixed with the products of the shop, so the
+        // customer always knows that he is looking at a test service.
+        if (api_test_products($pdo, (string) $user_info['agent'])) {
+            $panel_list[] = [
+                'id' => NEXORA_TEST_SECTION,
+                'name' => (string) ($textbotlang['users']['testService']['section'] ?? '🧪'),
+                'is_custom' => false,
+                'is_username' => false,
+                'is_note' => false
+            ];
+        }
         echo json_encode([
             'status' => true,
             'msg' => "Successful",
@@ -481,6 +493,17 @@ function mini_categories(array $data, string $method): void
         $category_list = [];
         $panel = select("marzban_panel", "*", "code_panel", $data['id_panel'], "select");
         if (empty($panel)) {
+            // The test section of the web application has no panel of its own:
+            // the test products live on the panels of the bot. The section has
+            // no category either, so the step of the category is skipped.
+            if ((string) ($data['id_panel'] ?? '') === NEXORA_TEST_SECTION) {
+                echo json_encode(array(
+                    'status' => true,
+                    'msg' => "Successful",
+                    'obj' => []
+                ));
+                return;
+            }
             echo json_encode(array(
                 'status' => false,
                 'msg' => "panel not fonud!(invalid id_panel)"
@@ -488,7 +511,7 @@ function mini_categories(array $data, string $method): void
             return;
         }
         while ($result = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $stmts = $pdo->prepare("SELECT * FROM product WHERE (Location = :location OR Location = '/all') AND category = :category AND agent = :agent AND status_product != 'disable'");
+            $stmts = $pdo->prepare("SELECT * FROM product WHERE (Location = :location OR Location = '/all') AND category = :category AND agent = :agent AND status_product != 'disable'" . api_product_test_filter($pdo));
             $stmts->bindParam(':location', $panel['name_panel'], PDO::PARAM_STR);
             $stmts->bindParam(':category', $result['remark'], PDO::PARAM_STR);
             $stmts->bindParam(':agent', $user_info['agent']);
@@ -538,14 +561,39 @@ function mini_time_ranges(array $data, string $method): void
         }
         $category_time_list = [];
         $panel = select("marzban_panel", "*", "code_panel", $data['id_panel'], "select");
-        if (empty($panel)) {
+        $isTestSection = ((string) ($data['id_panel'] ?? '') === NEXORA_TEST_SECTION);
+        if (empty($panel) && !$isTestSection) {
             echo json_encode(array(
                 'status' => false,
                 'msg' => "panel not fonud!(invalid id_panel)"
             ));
             return;
         }
-        $stmt = $pdo->prepare("SELECT (Service_time) FROM product WHERE (Location = :name_panel OR Location = '/all') AND  agent = :agent");
+        if ($isTestSection) {
+            // The duration of a test service is counted in hours, so the list
+            // is built from the durations the test products really have.
+            $stmt = $pdo->prepare("SELECT (Service_time) FROM product WHERE agent = :agent" . api_test_products_filter($pdo));
+            $stmt->bindValue(':agent', $user_info['agent'], PDO::PARAM_STR);
+            $stmt->execute();
+            foreach (array_unique($stmt->fetchAll(PDO::FETCH_COLUMN)) as $hours) {
+                $hours = (int) $hours;
+                $category_time_list[] = array(
+                    'id' => 0,
+                    'name' => strtr(
+                        (string) ($textbotlang['users']['testService']['hours'] ?? '{hours}'),
+                        ['{hours}' => (string) $hours]
+                    ),
+                    'day' => $hours
+                );
+            }
+            echo json_encode([
+                'status' => true,
+                'msg' => "Successful",
+                'obj' => $category_time_list
+            ]);
+            return;
+        }
+        $stmt = $pdo->prepare("SELECT (Service_time) FROM product WHERE (Location = :name_panel OR Location = '/all') AND  agent = :agent" . api_product_test_filter($pdo));
         $stmt->bindValue(':agent', $user_info['agent'], PDO::PARAM_STR);
         $stmt->bindValue(':name_panel', $panel['name_panel'], PDO::PARAM_STR);
         $stmt->execute();
@@ -677,7 +725,8 @@ function mini_services(array $data, string $method): void
     $user_info = select("user", "*", "token", $tokencheck, "select");
     if ($user_info) {
         $panel = select("marzban_panel", "*", "code_panel", $data['id_panel'], "select");
-        if (empty($panel)) {
+        $isTestSection = ((string) ($data['id_panel'] ?? '') === NEXORA_TEST_SECTION);
+        if (empty($panel) && !$isTestSection) {
             echo json_encode(array(
                 'status' => false,
                 'msg' => "panel not fonud!(invalid id_panel)"
@@ -686,7 +735,7 @@ function mini_services(array $data, string $method): void
         }
         $category_remark = null;
         $category_remarks = "";
-        $queryParams = [':loc' => $panel['name_panel'], ':ag' => $user_info['agent']];
+        $queryParams = [':loc' => $isTestSection ? '' : $panel['name_panel'], ':ag' => $user_info['agent']];
         $selected_category_id = isset($data['category_id']) ? $data['category_id'] : null;
         if (!empty($data['category_id'])) {
             $category_remark = select("category", "*", "id", $data['category_id'], "select");
@@ -706,7 +755,13 @@ function mini_services(array $data, string $method): void
             $time_range_day = "AND Service_time = :trd";
             $queryParams[':trd'] = $data['time_range_day'];
         }
-        $stmt = $pdo->prepare("SELECT * FROM product WHERE (Location = :loc OR Location = '/all')AND agent= :ag AND status_product != 'disable' $category_remarks $time_range_day ORDER BY display_order, id");
+        if ($isTestSection) {
+            // The test section has no panel of its own: the test products live
+            // on the panels of the bot, so every one of them is shown.
+            $stmt = $pdo->prepare("SELECT * FROM product WHERE agent = :ag AND status_product != 'disable'" . api_test_products_filter($pdo) . " $category_remarks $time_range_day ORDER BY display_order, id");
+        } else {
+            $stmt = $pdo->prepare("SELECT * FROM product WHERE (Location = :loc OR Location = '/all')AND agent= :ag AND status_product != 'disable'" . api_product_test_filter($pdo) . " $category_remarks $time_range_day ORDER BY display_order, id");
+        }
         $stmt->execute($queryParams);
         $product_list = [];
         $countorder = null;
@@ -715,7 +770,8 @@ function mini_services(array $data, string $method): void
             if (!is_array($hide_panel)) {
                 $hide_panel = [];
             }
-            if (in_array($panel['name_panel'], $hide_panel))
+            $panelName = $isTestSection ? (string) ($result['Location'] ?? '') : $panel['name_panel'];
+            if (in_array($panelName, $hide_panel))
                 continue;
             if ($result['one_buy_status'] == "1") {
                 if ($countorder === null) {
@@ -738,7 +794,7 @@ function mini_services(array $data, string $method): void
                 'traffic_gb' => $result['Volume_constraint'],
                 'time_days' => intval($result['Service_time']),
                 'category_id' => $selected_category_id,
-                'country_id' => $panel['code_panel'],
+                'country_id' => $isTestSection ? NEXORA_TEST_SECTION : $panel['code_panel'],
                 'time_range_id' => $result['Service_time']
 
             ];
@@ -904,6 +960,147 @@ function mini_pending_order(array $user_info, array $panel, array $product, floa
     ];
 }
 
+/**
+ * Buys a test service from the test section of the web application.
+ *
+ * The rules are the rules of the bot itself: the customer has a share of test
+ * services, the share is taken away with every test service and the account is
+ * made on the panel of the test product. The test service costs nothing.
+ */
+function mini_test_purchase(array $data, string $method, array $user_info): void
+{
+    global $pdo, $setting, $textbotlang, $ManagePanel, $errorreport;
+
+    $product = select("product", "*", "code_product", (string) ($data['service_id'] ?? ''), "select");
+    if (!$product || (int) ($product['is_test'] ?? 0) !== 1 || (string) ($product['status_product'] ?? '') !== 'active') {
+        http_response_code(404);
+        echo json_encode([
+            'status' => false,
+            'msg' => (string) ($textbotlang['users']['testService']['empty'] ?? 'no test service'),
+        ]);
+        return;
+    }
+    if ((string) ($product['agent'] ?? '') !== (string) $user_info['agent']) {
+        http_response_code(403);
+        echo json_encode([
+            'status' => false,
+            'msg' => (string) ($textbotlang['users']['sell']['productNotFound'] ?? 'not found'),
+        ]);
+        return;
+    }
+    $panel = select("marzban_panel", "*", "name_panel", (string) ($product['Location'] ?? ''), "select");
+    if (!$panel || (string) ($panel['status'] ?? '') !== 'active') {
+        http_response_code(500);
+        echo json_encode([
+            'status' => false,
+            'msg' => (string) ($textbotlang['users']['sell']['nullPanel'] ?? 'no panel'),
+        ]);
+        return;
+    }
+    // The share of the customer: an administrator is never stopped.
+    $adminIds = array_map('strval', (array) select("admin", "id_admin", null, null, "FETCH_COLUMN"));
+    $limit = (int) ($user_info['limit_usertest'] ?? 0);
+    if ($limit <= 0 && !in_array((string) $user_info['id'], $adminIds, true)) {
+        http_response_code(403);
+        echo json_encode([
+            'status' => false,
+            'msg' => (string) ($textbotlang['users']['usertest']['limitwarning'] ?? 'no test service left'),
+        ]);
+        return;
+    }
+
+    $hours = (int) ($product['Service_time'] ?? 0);
+    $volumeGb = (float) ($product['Volume_constraint'] ?? 0);
+    $random = bin2hex(random_bytes(4));
+    $baseUsername = strtolower((string) generateUsername(
+        (int) $user_info['id'],
+        (string) ($panel['MethodUsername'] ?? ''),
+        (string) ($user_info['username'] ?? ''),
+        $random,
+        '',
+        (string) ($panel['namecustom'] ?? ''),
+        (string) ($user_info['namecustom'] ?? '')
+    ));
+    $datac = [
+        'expire' => strtotime(date("Y-m-d H:i:s", strtotime("+" . $hours . "hours"))),
+        'data_limit' => $volumeGb * 1073741824,
+        'from_id' => (int) $user_info['id'],
+        'username' => (string) ($user_info['username'] ?? ''),
+        'type' => 'usertest',
+    ];
+    $account = nexora_create_test_account(
+        $ManagePanel,
+        (string) $panel['name_panel'],
+        (string) $product['code_product'],
+        $datac,
+        function (int $attempt) use ($ManagePanel, $baseUsername, $panel) {
+            if ($attempt > 0) {
+                return nexora_test_account_name($baseUsername);
+            }
+            $dataUser = $ManagePanel->DataUser((string) $panel['name_panel'], $baseUsername);
+            if (isset($dataUser['username']) || rowExists("invoice", "username", $baseUsername)) {
+                return rand(1000000, 9999999) . "_" . $baseUsername;
+            }
+            return $baseUsername;
+        }
+    );
+    if (empty($account['ok'])) {
+        $output = is_array($account['output'] ?? null) ? $account['output'] : [];
+        $detail = (string) ($output['msg'] ?? 'unknown error');
+        if (strlen((string) ($setting['Channel_Report'] ?? '')) > 0) {
+            telegram('sendmessage', [
+                'chat_id' => $setting['Channel_Report'],
+                'message_thread_id' => $errorreport,
+                'text' => sprintf(
+                    (string) ($textbotlang['Admin']['reportgroup']['errorTestAccountCreate'] ?? 'the test account of %s could not be made: %s'),
+                    $detail,
+                    (int) $user_info['id'],
+                    (string) ($user_info['username'] ?? ''),
+                    (string) $panel['name_panel']
+                ),
+                'parse_mode' => "HTML"
+            ]);
+        }
+        http_response_code(500);
+        echo json_encode([
+            'status' => false,
+            'msg' => (string) ($textbotlang['users']['usertest']['errorcreat'] ?? 'the test account could not be made'),
+        ]);
+        return;
+    }
+
+    $username = (string) ($account['username'] ?? '');
+    $orderId = bin2hex(random_bytes(4));
+    $stmt = $pdo->prepare("INSERT IGNORE INTO invoice (id_user, id_invoice, username, time_sell, Service_location, name_product, price_product, Volume, Service_time, Status, notifctions) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
+    $stmt->execute([
+        (int) $user_info['id'],
+        $orderId,
+        $username,
+        time(),
+        (string) $product['Location'],
+        (string) $product['name_product'],
+        0,
+        $volumeGb,
+        $hours,
+        'active',
+        json_encode(['volume' => false, 'time' => false]),
+    ]);
+    // The share of the customer is taken away with the test service.
+    update("user", "limit_usertest", max(0, $limit - 1), "id", $user_info['id']);
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'ok',
+        'order_id' => $orderId,
+        'service' => [
+            'id' => $orderId,
+            'username' => $username,
+            'status' => 'active',
+            'expire' => $datac['expire'],
+        ],
+    ]);
+}
+
 function mini_purchase(array $data, string $method): void
 {
     global $pdo, $setting, $textbotlang, $ManagePanel, $errorreport, $porsantreport, $buyreport, $usercheck;
@@ -921,6 +1118,12 @@ function mini_purchase(array $data, string $method): void
             'status' => false,
             'msg' => strip_tags($textbotlang['users']['invalidusername'])
         ));
+        return;
+    }
+    // The test section of the web application has no panel of its own: the
+    // test product is bought from the panel it really lives on.
+    if ((string) ($data['country_id'] ?? '') === NEXORA_TEST_SECTION) {
+        mini_test_purchase($data, $method, $usercheck);
         return;
     }
     $panel = select("marzban_panel", "*", "code_panel", $data['country_id'] ?? '', "select");

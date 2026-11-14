@@ -231,6 +231,11 @@ $initials = mb_strtoupper(mb_substr($currentUser, 0, 1, 'UTF-8'), 'UTF-8');
             <span class="nav-icon"><?= icon('package') ?></span><span
               class="nav-label">سرویس تست</span>
           </a>
+          <a href="update.php" class="nav-item <?= $activeNav === 'update' ? 'active' : '' ?>"
+            title="آپدیت ربات">
+            <span class="nav-icon"><?= icon('download') ?></span><span
+              class="nav-label">آپدیت ربات</span>
+          </a>
 
         </div>
         <div class="nav-section">

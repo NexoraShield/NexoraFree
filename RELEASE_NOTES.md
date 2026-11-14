@@ -1,5 +1,22 @@
 # Nexora Bot — Release Notes
 
+## v1.22.87 (2026-11-14) — The test services have their own section in the web application and the panel of the bot can update the bot
+
+**The test services are never mixed with the products of the shop**
+- The web application (the app of the customer) showed the test products among the products of the shop. They are left out now: the list of the countries, the list of the categories, the list of the durations and the list of the services only show the real products.
+- The test services have their own section in the web application ("🧪 سرویس تست"): the customer sees only the test products there, with their volume and their duration in hours.
+- A test service is bought in that section with the rules of the bot itself: the share of the customer is taken away with every test service, the account is made on the panel of the test product and a broken account never leaves the customer without an answer.
+
+**The panel of the bot can update the bot**
+- A new page in the management section of the panel: "آپدیت ربات". It asks the owner which version he wants (the stable one or the test one) and the hub of the fleet does the work: the bot is stopped, the new code is written, the migration of the database runs and the bot starts again. The bot is never half written.
+- The page follows the log of the update, so the owner sees what happens without waiting in front of a frozen page.
+
+**The channels of the release**
+- The stable version and the test version are two branches of the repository. The hub of the fleet (the panel of the bots) has a new tab "channels of the release": it says which one is the stable one and which one is the test one, and it writes the choice into the config of every bot.
+- Every bot also gets its own secret, so only its own panel can ask the hub to update it. The bot of another fleet can not touch it.
+
+---
+
 ## v1.22.86 (2026-11-14) — The agent panel reads well, the details of a user open in a luxury window and the link of a service is one click away
 
 **The letters of the agent panel are readable now**

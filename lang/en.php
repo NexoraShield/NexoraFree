@@ -256,6 +256,8 @@ Choose the panel that should be charged:',
     'selectProduct' => '🛒 Which product do you want to charge?',
     'successManual' => '✅ The operation was successful and the details were sent to the support.\n\nIt is applied within 24 hours. To speed things up you can message the support of the bot.',],
                 'testService' => [
+                        'section' => '🧪 Test service',
+                        'hours' => '⏳ {hours} hours',
                         'intro' => '🧪 <b>Test service</b>
 
 Choose one of the test services:',

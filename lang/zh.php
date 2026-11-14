@@ -256,6 +256,8 @@ return [
     'selectProduct' => '🛒 您想为哪个商品充值？',
     'successManual' => '✅ 操作已成功，详情已发送给客服。\n\n将在 24 小时内生效。如需加快进度，可以给机器人客服发消息。',],
                 'testService' => [
+                        'section' => '🧪 测试服务',
+                        'hours' => '⏳ {hours} 小时',
                         'intro' => '🧪 <b>测试服务</b>
 
 请选择一个测试服务：',

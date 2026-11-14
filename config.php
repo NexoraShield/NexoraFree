@@ -28,5 +28,14 @@ $APIKEY = '{API_KEY}';
 $adminnumber = '{admin_number}';
 $domainhosts = '{domain_name}';
 $usernamebot = '{username_bot}';
+// The channels of the release: the branch that is the stable one and the
+// branch that is the test one. The hub of the fleet writes the real values
+// into the config of the bot (the tab "channels" of the hub panel).
+$nexora_channel_stable = 'main';
+$nexora_channel_test = 'test';
+// The hub of the fleet: the panel of the bot asks it to update the bot, so
+// the bot is never half written. The token is the secret of the bot.
+$nexora_hub_url = '';
+$nexora_hub_token = '';
 
 ?>

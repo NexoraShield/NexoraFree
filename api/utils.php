@@ -255,3 +255,101 @@ function requireInt(array $data, $field, $min = null, $max = null)
 
     return $value;
 }
+
+/**
+ * The columns of a table.
+ *
+ * A column that the database does not know yet is simply left out, so a query
+ * never breaks on a database that was never migrated.
+ */
+function api_table_columns(PDO $pdo, string $table): array
+{
+    static $cache = [];
+    $key = strtolower($table);
+    if (isset($cache[$key])) {
+        return $cache[$key];
+    }
+    $columns = [];
+    try {
+        $st = $pdo->prepare("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?");
+        $st->execute([$table]);
+        $columns = $st->fetchAll(PDO::FETCH_COLUMN);
+    } catch (Throwable $e) {
+        $columns = [];
+    }
+    $cache[$key] = $columns;
+    return $columns;
+}
+
+/**
+ * The part of a query that hides the test products.
+ *
+ * The test products are not products of the shop: they belong to the test
+ * service and they have their own section in the web application. A database
+ * that does not know the column "is_test" yet shows everything it has.
+ */
+function api_product_test_filter(PDO $pdo): string
+{
+    static $filter = null;
+    if ($filter !== null) {
+        return $filter;
+    }
+    $columns = array_map('strtolower', api_table_columns($pdo, 'product'));
+    $filter = in_array('is_test', $columns, true) ? ' AND is_test = 0' : '';
+    return $filter;
+}
+
+/**
+ * The part of a query that shows only the test products.
+ *
+ * A database that does not know the column "is_test" yet has no test product
+ * at all, so the query brings nothing back.
+ */
+function api_test_products_filter(PDO $pdo): string
+{
+    static $filter = null;
+    if ($filter !== null) {
+        return $filter;
+    }
+    $columns = array_map('strtolower', api_table_columns($pdo, 'product'));
+    $filter = in_array('is_test', $columns, true) ? ' AND is_test = 1' : ' AND 1 = 0';
+    return $filter;
+}
+
+/**
+ * The name of the section of the test service in the web application.
+ *
+ * The test products are never mixed with the products of the shop: they have
+ * their own section, so the customer always knows that he is looking at a
+ * test service.
+ */
+if (!defined('NEXORA_TEST_SECTION')) {
+    define('NEXORA_TEST_SECTION', 'nexora-test');
+}
+
+/**
+ * The test products the customer may see.
+ *
+ * The test products belong to the customer of the bot (the agent "f"). The
+ * share of the customer is not checked here: it is checked when he buys one.
+ */
+function api_test_products(PDO $pdo, string $agent): array
+{
+    static $cache = [];
+    if (isset($cache[$agent])) {
+        return $cache[$agent];
+    }
+    $rows = [];
+    try {
+        $sql = "SELECT * FROM product WHERE agent = :ag AND status_product = 'active'"
+            . api_test_products_filter($pdo) . " ORDER BY display_order, id";
+        $st = $pdo->prepare($sql);
+        $st->execute([':ag' => $agent]);
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        error_log('api_test_products: ' . $e->getMessage());
+        $rows = [];
+    }
+    $cache[$agent] = $rows;
+    return $rows;
+}
