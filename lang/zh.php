@@ -1803,6 +1803,7 @@ n2',
                         'addPanel' => '🖥 添加面板',
                         'manageUser' => '👤 用户管理',
                         'managementPanel' => '✏️ 面板管理',
+                        'updateBot' => '⬆️ 更新机器人',
                 ],
                 'card' => [
                         'askNumber' => '💳 请发送您的银行卡号
@@ -3755,6 +3756,7 @@ f,n.n2',
         ⚠️ 尊敬的用户；您不是我们频道的成员
 请通过下方按钮加入频道
 加入后，点击检查成员资格按钮',
+                'channelMissing' => '⚠️ 亲爱的用户；您还没有加入以下频道：\n{channels}\n请通过下面的按钮加入频道，加入后再点击「检查会员资格」。',
                 'cryptoPayment' => '💰 使用 NowPayments 支付加密货币',
                 'discount' => '🎁 礼品码',
                 'extend' => '♻️ 续费服务',

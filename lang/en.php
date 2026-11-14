@@ -1803,6 +1803,7 @@ Send the token above in the <code>Token</code> header of every request.',
                         'addPanel' => '🖥 Add panel',
                         'manageUser' => '👤 User management',
                         'managementPanel' => '✏️ Panel management',
+                        'updateBot' => '⬆️ Update bot',
                 ],
                 'card' => [
                         'askNumber' => '💳 Send your card number
@@ -3755,6 +3756,7 @@ Connection link:
         ⚠️ Dear user; you are not a member of our channel
 Join the channel via the button below
 After joining, click the check membership button',
+        'channelMissing' => '⚠️ Dear user; you have not joined these channels yet:\n{channels}\nJoin them with the button below and press "Check membership" afterwards.',
                 'cryptoPayment' => '💰 Crypto Payment with NowPayments',
                 'discount' => '🎁 Gift code',
                 'extend' => '♻️ Renew service',

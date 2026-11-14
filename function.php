@@ -1325,7 +1325,7 @@ function channel(array $id_channel)
             $response = telegram('getChatMember', [
                 'chat_id' => $chatId,
                 'user_id' => $from_id
-            ], null, true, 3);
+            ], null, true, 8);
             if (!empty($response['ok']) && is_array($response['result'] ?? null)) {
                 $status = (string) ($response['result']['status'] ?? '');
             } else {
@@ -1342,7 +1342,9 @@ function channel(array $id_channel)
                 @file_put_contents($cacheFile, json_encode($status), LOCK_EX);
             }
         }
-        if (!in_array($status, ['member', 'creator', 'administrator'])) {
+        // A member of a channel can be "restricted" (the permissions of the
+        // member are limited): he is still a member, so he is let through.
+        if (!in_array($status, ['member', 'creator', 'administrator', 'restricted'])) {
             $channel_link[] = $channel;
         }
     }
@@ -1352,6 +1354,39 @@ function channel(array $id_channel)
         return $channel_link;
     }
 }
+/**
+ * The message that tells the customer which channels he has not joined yet.
+ *
+ * The bot can ask for more than one channel. The customer who joined the
+ * first one must know that another one is still missing, so the message names
+ * the channels instead of only saying "you are not a member of our channel".
+ */
+function nexora_channel_missing_message(array $channels): string
+{
+    global $textbotlang;
+    $template = (string) ($textbotlang['textbot']['channelMissing'] ?? '');
+    if ($template === '') {
+        return (string) ($textbotlang['textbot']['channel'] ?? '');
+    }
+    $names = [];
+    foreach ($channels as $channel) {
+        $remark = '';
+        try {
+            $row = select("channels", "*", 'link', $channel, "select");
+            if (is_array($row)) {
+                $remark = trim((string) ($row['remark'] ?? ''));
+            }
+        } catch (Throwable $e) {
+            $remark = '';
+        }
+        if ($remark === '') {
+            $remark = (string) $channel;
+        }
+        $names[] = '• ' . htmlspecialchars($remark, ENT_QUOTES, 'UTF-8');
+    }
+    return strtr($template, ['{channels}' => implode("\n", $names)]);
+}
+
 function nexora_channel_cache_clear($userId = null): void
 {
     // The answer of Telegram about the membership of a channel is kept for a
@@ -2887,6 +2922,97 @@ function nexora_topup_button($shop): array
         error_log('nexora_topup_button: ' . $e->getMessage());
     }
     return ['label' => $label, 'style' => $style, 'shop' => $shop];
+}
+
+/**
+ * The screen of the shop of the reseller panel, exactly as the customer sees
+ * it in the bot.
+ *
+ * The bot and the web panel of the bot show the same thing: the same
+ * products, the same names, the same premium emoji and the same button of the
+ * top up. The screen is built here once, so the two places can never drift
+ * apart.
+ */
+function nexora_agent_shop_screen(): array
+{
+    global $pdo, $textbotlang;
+    $items = [];
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM product WHERE agent = 'agentshop' AND status_product = 'active' ORDER BY display_order, id");
+        $stmt->execute();
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        error_log('nexora_agent_shop_screen: ' . $e->getMessage());
+        $items = [];
+    }
+    $rows = [];
+    $showPrice = getShopSetting("statusshowprice")['value'] != "offshowprice";
+    foreach ($items as $item) {
+        $label = (string) $item['name_product'];
+        if ($showPrice) {
+            $label .= " - " . number_format($item['price_product']) . ($textbotlang['common']['labels']['tomanUnit'] ?? '');
+        }
+        $rows[] = [nexora_style_btn($label, "agentshop_select_" . $item['code_product'], $item)];
+    }
+    $rows[] = [['text' => $textbotlang['users']['backbtn'], 'callback_data' => "backuser"]];
+    $topup = nexora_topup_button('agentshop');
+    $rows[] = [nexora_style_btn($topup['label'], "topup_agentshop", ['btn_style' => $topup['style']])];
+    $intro = (string) ($textbotlang['users']['agentShop']['intro'] ?? '');
+    if (!empty($textbotlang['users']['agentShop']['note'])) {
+        $intro .= "\n\n" . $textbotlang['users']['agentShop']['note'];
+    }
+    if (!empty($textbotlang['users']['agentShop']['choose'])) {
+        $intro .= "\n\n" . $textbotlang['users']['agentShop']['choose'];
+    }
+    $intro .= "\n\n" . (string) ($textbotlang['users']['agentShop']['steps'] ?? '');
+    if (!$items) {
+        $intro = ($textbotlang['users']['agentShop']['empty'] ?? '') . "\n\n" . $intro;
+    }
+    return [
+        'text' => $intro,
+        'keyboard' => json_encode(['inline_keyboard' => $rows]),
+        'items' => $items,
+        'topup' => $topup,
+    ];
+}
+
+/**
+ * The screen of the shop of the agent panel, exactly as the customer sees it
+ * in the bot.
+ */
+function nexora_agent_panel_shop_screen(): array
+{
+    global $textbotlang;
+    $items = nexora_agent_panel_products(true);
+    $rows = [];
+    $showPrice = getShopSetting("statusshowprice")['value'] != "offshowprice";
+    foreach ($items as $item) {
+        $label = (string) $item['name'];
+        if ($showPrice) {
+            $label .= " - " . number_format($item['price']) . ($textbotlang['common']['labels']['tomanUnit'] ?? '');
+        }
+        $rows[] = [nexora_style_btn($label, "agentpanelshop_select_" . (int) $item['id'], $item)];
+    }
+    $rows[] = [['text' => $textbotlang['users']['backbtn'], 'callback_data' => "backuser"]];
+    $topup = nexora_topup_button('agentpanelshop');
+    $rows[] = [nexora_style_btn($topup['label'], "topup_agentpanelshop", ['btn_style' => $topup['style']])];
+    $intro = (string) ($textbotlang['users']['agentPanelShop']['intro'] ?? '');
+    if (!empty($textbotlang['users']['agentPanelShop']['note'])) {
+        $intro .= "\n\n" . $textbotlang['users']['agentPanelShop']['note'];
+    }
+    if (!empty($textbotlang['users']['agentPanelShop']['choose'])) {
+        $intro .= "\n\n" . $textbotlang['users']['agentPanelShop']['choose'];
+    }
+    $intro .= "\n\n" . (string) ($textbotlang['users']['agentPanelShop']['steps'] ?? '');
+    if (!$items) {
+        $intro = ($textbotlang['users']['agentPanelShop']['empty'] ?? '') . "\n\n" . $intro;
+    }
+    return [
+        'text' => $intro,
+        'keyboard' => json_encode(['inline_keyboard' => $rows]),
+        'items' => $items,
+        'topup' => $topup,
+    ];
 }
 // The panels a customer can charge. For the agent panel shop these are the
 // agent panels the customer already owns, for the agent shop the panels of

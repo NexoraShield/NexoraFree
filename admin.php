@@ -4,6 +4,8 @@ require_once __DIR__ . '/panel_protocol.php';
 require_once __DIR__ . '/testservice_admin.php';
 require_once __DIR__ . '/agentshop_admin.php';
 require_once __DIR__ . '/shop_admin.php';
+require_once __DIR__ . '/channel_post_admin.php';
+require_once __DIR__ . '/update_bot_admin.php';
 $version = file_get_contents('version');
 $textadmin = ["panel", "/panel", $textbotlang['Admin']['panelAdmin']];
 $text_panel_admin_login_template = sprintf($textbotlang['Admin']['report']['aboutBot'], $version);
@@ -198,10 +200,267 @@ if ($datain == "paygwback") {
         [['text' => '🤝 یادداشت‌های همکاری', 'callback_data' => "adv_collab"]],
         [['text' => '🧪 سرویس تست', 'callback_data' => "adv_testservices"]],
         [['text' => '💳 شارژ پنل', 'callback_data' => "adv_topup"]],
+        [['text' => '📢 متن در کانال', 'callback_data' => "adv_channelpost"]],
+        [['text' => '⬆️ آپدیت ربات', 'callback_data' => "adv_update"]],
         [['text' => $textbotlang['Admin']['backAdminBtn'], 'callback_data' => "admin"]],
     ];
     $advancedKeyboard = json_encode(['inline_keyboard' => $advancedRows]);
     sendmessage($from_id, "🚀 <b>قابلیت‌های پیشرفته</b>\n\nهمان امکاناتی که در پنل تحت وب دارید، مستقیم داخل ربات:\nیکی از گزینه‌ها را انتخاب کنید:", $advancedKeyboard, 'HTML');
+} elseif ($datain == "adv_channelpost" && $adminrulecheck['rule'] == "administrator") {
+    // ---------------- [ the message of the channel ] ----------------
+    // The administrator writes a message and publishes it in one of his
+    // channels. Every operation has an id of its own, so the work of two
+    // administrators never mixes.
+    $channelPostOp = nexora_channel_post_create($from_id);
+    if (!$channelPostOp) {
+        sendmessage($from_id, "❌ عملیات ساخته نشد. لطفاً دوباره تلاش کنید.", null, 'HTML');
+        return;
+    }
+    update("user", "Processing_value_one", (string) $channelPostOp['id'], "id", $from_id);
+    step('adv_cp_link', $from_id);
+    sendmessage($from_id, "📢 <b>متن در کانال</b>\n\nلطفاً لینک کانالی را که می‌خواهید پیام در آن منتشر شود ارسال کنید.\n\nنام کانال (‎@name) یا لینک https://t.me/name را بفرستید. ربات باید ادمین آن کانال باشد و اجازه ارسال پیام داشته باشد.", null, 'HTML');
+    return;
+} elseif ($user['step'] == "adv_cp_link" && $adminrulecheck['rule'] == "administrator") {
+    // ---------------- [ the message of the channel: the link ] ----------------
+    $channelPostOp = nexora_channel_post_current($from_id);
+    if (!$channelPostOp) {
+        step('home', $from_id);
+        sendmessage($from_id, "❌ عملیات پیدا نشد. لطفاً از «متن در کانال» دوباره شروع کنید.", null, 'HTML');
+        return;
+    }
+    $channelPostCheck = nexora_channel_post_check_channel((string) $text);
+    if (empty($channelPostCheck['ok'])) {
+        // The reason goes to the administrator and to the group of the reports.
+        sendmessage($from_id, "❌ " . (string) $channelPostCheck['error'] . "\n\nلینک دیگری بفرستید.", null, 'HTML');
+        nexora_channel_post_report('دریافت لینک کانال', $channelPostOp, (string) $channelPostCheck['error'], (string) $from_id);
+        return;
+    }
+    $channelPostOp['channel_link'] = trim((string) $text);
+    $channelPostOp['channel_chat_id'] = (string) $channelPostCheck['chat_id'];
+    $channelPostOp['channel_title'] = (string) $channelPostCheck['title'];
+    nexora_channel_post_save($channelPostOp);
+    step('adv_cp_content', $from_id);
+    $channelPostTitle = trim((string) $channelPostCheck['title']);
+    sendmessage($from_id, "✅ کانال پیدا شد: <b>" . ($channelPostTitle !== '' ? $channelPostTitle : $channelPostCheck['chat_id']) . "</b>\n\nمتن موردنظر خود را ارسال کنید. در صورت تمایل می‌توانید همراه متن، یک عکس نیز ارسال کنید تا متن در زیر عکس نمایش داده شود.", null, 'HTML');
+    return;
+} elseif ($user['step'] == "adv_cp_content" && $adminrulecheck['rule'] == "administrator") {
+    // ---------------- [ the message of the channel: the content ] ----------------
+    $channelPostOp = nexora_channel_post_current($from_id);
+    if (!$channelPostOp) {
+        step('home', $from_id);
+        sendmessage($from_id, "❌ عملیات پیدا نشد. لطفاً از «متن در کانال» دوباره شروع کنید.", null, 'HTML');
+        return;
+    }
+    // The message of the administrator is taken as it came: the format of
+    // Telegram (bold, italic, links and the premium emoji) is kept.
+    $channelPostPhoto = trim((string) ($photoid ?? ''));
+    $channelPostRaw = trim((string) ($update['message']['text'] ?? ''));
+    $channelPostEntities = $update['message']['entities'] ?? null;
+    if ($channelPostPhoto !== '') {
+        $channelPostCaption = trim((string) ($update['message']['caption'] ?? ''));
+        $channelPostOp['content_type'] = 'photo';
+        $channelPostOp['file_id'] = $channelPostPhoto;
+        if ($channelPostCaption === '') {
+            // The picture is there, the text is still missing.
+            $channelPostOp['message_text'] = '';
+            nexora_channel_post_save($channelPostOp);
+            sendmessage($from_id, "🖼 عکس گرفته شد. حالا متن موردنظر را بفرستید.", null, 'HTML');
+            return;
+        }
+        $channelPostOp['message_text'] = nexora_channel_post_entities_html($channelPostCaption, $update['message']['caption_entities'] ?? null);
+    } else {
+        if ($channelPostRaw === '') {
+            sendmessage($from_id, "متن موردنظر را بفرستید (یا یک عکس همراه متن).", null, 'HTML');
+            return;
+        }
+        $channelPostOp['content_type'] = 'text';
+        $channelPostOp['message_text'] = nexora_channel_post_entities_html($channelPostRaw, $channelPostEntities);
+    }
+    nexora_channel_post_save($channelPostOp);
+    step('adv_cp_buttons', $from_id);
+    $channelPostSelected = nexora_channel_post_buttons_list($channelPostOp);
+    sendmessage($from_id, nexora_channel_post_list_text($channelPostSelected), nexora_channel_post_list_keyboard($channelPostSelected), 'HTML');
+    return;
+} elseif (preg_match('/^adv_cp_toggle_([a-z_]+)$/', $datain, $channelPostMatch) && $adminrulecheck['rule'] == "administrator") {
+    // ---------------- [ the message of the channel: the buttons ] ----------------
+    $channelPostOp = nexora_channel_post_current($from_id);
+    if (!$channelPostOp) {
+        sendmessage($from_id, "❌ عملیات پیدا نشد. لطفاً از «متن در کانال» دوباره شروع کنید.", null, 'HTML');
+        return;
+    }
+    $channelPostKey = strtolower((string) $channelPostMatch[1]);
+    if (nexora_channel_post_action($channelPostKey) === null) {
+        return;
+    }
+    $channelPostSelected = nexora_channel_post_buttons_list($channelPostOp);
+    if (in_array($channelPostKey, $channelPostSelected, true)) {
+        $channelPostSelected = array_values(array_diff($channelPostSelected, [$channelPostKey]));
+    } else {
+        $channelPostSelected[] = $channelPostKey;
+    }
+    // The buttons keep the order of the list, whatever the order of the
+    // presses of the administrator is.
+    $channelPostSelected = array_values(array_intersect(array_keys(nexora_channel_post_actions()), $channelPostSelected));
+    $channelPostOp['buttons'] = json_encode($channelPostSelected, JSON_UNESCAPED_UNICODE);
+    nexora_channel_post_save($channelPostOp);
+    Editmessagetext($from_id, $message_id, nexora_channel_post_list_text($channelPostSelected), nexora_channel_post_list_keyboard($channelPostSelected), 'HTML');
+    return;
+} elseif ($datain == "adv_cp_next" && $adminrulecheck['rule'] == "administrator") {
+    // ---------------- [ the message of the channel: the preview ] ----------------
+    $channelPostOp = nexora_channel_post_current($from_id);
+    if (!$channelPostOp) {
+        sendmessage($from_id, "❌ عملیات پیدا نشد. لطفاً از «متن در کانال» دوباره شروع کنید.", null, 'HTML');
+        return;
+    }
+    $channelPostSelected = nexora_channel_post_buttons_list($channelPostOp);
+    if (!$channelPostSelected) {
+        sendmessage($from_id, "❌ دست‌کم یک دکمه را انتخاب کنید.", null, 'HTML');
+        return;
+    }
+    $channelPostKeyboard = nexora_channel_post_keyboard($channelPostSelected);
+    // The preview is the message itself, exactly as it goes to the channel.
+    $channelPostText = (string) ($channelPostOp['message_text'] ?? '');
+    $channelPostFile = (string) ($channelPostOp['file_id'] ?? '');
+    if (($channelPostOp['content_type'] ?? 'text') === 'photo' && $channelPostFile !== '') {
+        $channelPostDatas = ['chat_id' => $from_id, 'photo' => $channelPostFile, 'reply_markup' => $channelPostKeyboard];
+        if ($channelPostText !== '') {
+            $channelPostDatas['caption'] = $channelPostText;
+        }
+        telegram('sendPhoto', $channelPostDatas);
+    } else {
+        telegram('sendMessage', [
+            'chat_id' => $from_id,
+            'text' => $channelPostText !== '' ? $channelPostText : ' ',
+            'reply_markup' => $channelPostKeyboard,
+            'parse_mode' => 'HTML',
+        ]);
+    }
+    $channelPostOrder = [];
+    foreach ($channelPostSelected as $channelPostOne) {
+        $channelPostAction = nexora_channel_post_action((string) $channelPostOne);
+        if ($channelPostAction !== null) {
+            $channelPostOrder[] = $channelPostAction['label'];
+        }
+    }
+    sendmessage($from_id, "👁 <b>پیش‌نمایش</b>\n\nکانال: <b>" . htmlspecialchars((string) ($channelPostOp['channel_title'] ?: $channelPostOp['channel_link']), ENT_QUOTES, 'UTF-8') . "</b>\n"
+        . (($channelPostOp['content_type'] ?? 'text') === 'photo' ? "🖼 تصویر: دارد\n" : "🖼 تصویر: ندارد\n")
+        . "🔘 دکمه‌های پیام (به همین ترتیب زیر پیام می‌آیند):\n" . implode("\n", $channelPostOrder),
+        json_encode(['inline_keyboard' => [
+            [['text' => '✅ تأیید نهایی و انتشار', 'callback_data' => 'adv_cp_publish']],
+            [['text' => '✏️ بازگشت و ویرایش', 'callback_data' => 'adv_cp_back']],
+        ]], JSON_UNESCAPED_UNICODE), 'HTML');
+    step('adv_cp_preview', $from_id);
+    return;
+} elseif ($datain == "adv_cp_back" && $adminrulecheck['rule'] == "administrator") {
+    // ---------------- [ the message of the channel: back to the buttons ] ----------------
+    $channelPostOp = nexora_channel_post_current($from_id);
+    if (!$channelPostOp) {
+        sendmessage($from_id, "❌ عملیات پیدا نشد. لطفاً از «متن در کانال» دوباره شروع کنید.", null, 'HTML');
+        return;
+    }
+    $channelPostSelected = nexora_channel_post_buttons_list($channelPostOp);
+    step('adv_cp_buttons', $from_id);
+    sendmessage($from_id, nexora_channel_post_list_text($channelPostSelected), nexora_channel_post_list_keyboard($channelPostSelected), 'HTML');
+    return;
+} elseif ($datain == "adv_cp_publish" && $adminrulecheck['rule'] == "administrator") {
+    // ---------------- [ the message of the channel: the publish ] ----------------
+    $channelPostOp = nexora_channel_post_current($from_id);
+    if (!$channelPostOp) {
+        sendmessage($from_id, "❌ عملیات پیدا نشد. لطفاً از «متن در کانال» دوباره شروع کنید.", null, 'HTML');
+        return;
+    }
+    $channelPostResult = nexora_channel_post_publish($channelPostOp);
+    if (empty($channelPostResult['ok'])) {
+        sendmessage($from_id, "❌ انتشار انجام نشد: " . (string) $channelPostResult['error'], null, 'HTML');
+        nexora_channel_post_report('انتشار در کانال', $channelPostOp, (string) $channelPostResult['error'], (string) $from_id);
+        return;
+    }
+    nexora_channel_post_remove((string) $from_id);
+    step('home', $from_id);
+    update("user", "Processing_value_one", '', "id", $from_id);
+    sendmessage($from_id, "✅ پیام در کانال منتشر شد.\n\nشناسه پیام: <code>" . htmlspecialchars((string) ($channelPostResult['message_id'] ?? ''), ENT_QUOTES, 'UTF-8') . "</code>", null, 'HTML');
+    return;
+} elseif ($datain == "adv_cp_cancel" && $adminrulecheck['rule'] == "administrator") {
+    // ---------------- [ the message of the channel: the cancel ] ----------------
+    nexora_channel_post_remove((string) $from_id);
+    step('home', $from_id);
+    update("user", "Processing_value_one", '', "id", $from_id);
+    sendmessage($from_id, "🗑 عملیات لغو شد و اطلاعات آن پاک شد.", null, 'HTML');
+    return;
+} elseif ($datain == "adv_update" && $adminrulecheck['rule'] == "administrator") {
+    // ---------------- [ the update of the bot ] ----------------
+    // The hub of the fleet does the work: the bot only asks it to do it.
+    global $nexora_channel_stable, $nexora_channel_test;
+    $updateVersion = trim((string) @file_get_contents('version'));
+    $updateStable = trim((string) ($nexora_channel_stable ?? ''));
+    $updateTest = trim((string) ($nexora_channel_test ?? ''));
+    $updateText = "⬆️ <b>آپدیت ربات</b>\n\n"
+        . "نسخه هم‌اکنون: <code>" . htmlspecialchars($updateVersion !== '' ? $updateVersion : '—', ENT_QUOTES, 'UTF-8') . "</code>\n"
+        . "نسخه پایدار: <code>" . htmlspecialchars($updateStable !== '' ? $updateStable : '—', ENT_QUOTES, 'UTF-8') . "</code>\n"
+        . "نسخه آزمایشی: <code>" . htmlspecialchars($updateTest !== '' ? $updateTest : '—', ENT_QUOTES, 'UTF-8') . "</code>\n\n"
+        . "کدام نسخه می‌خواهی ربات روی آن برود؟ هاب خودش کار را انجام می‌دهد و ربات در این مدت خاموش نمی‌ماند.";
+    if (!nexora_update_bot_ready()) {
+        $updateText .= "\n\n⚠️ هاب هنوز این ربات را نشناخته است. از پنل هاب تب «کانال نسخه‌ها» را باز کن و دکمه «همگام‌سازی» را بزن.";
+    }
+    sendmessage($from_id, $updateText, nexora_update_bot_keyboard(), 'HTML');
+    return;
+} elseif (($datain == "adv_update_stable" || $datain == "adv_update_test") && $adminrulecheck['rule'] == "administrator") {
+    // ---------------- [ the update of the bot: the start ] ----------------
+    $updateChannel = $datain === "adv_update_test" ? 'test' : 'stable';
+    if (!nexora_update_bot_ready()) {
+        sendmessage($from_id, "❌ هاب هنوز این ربات را نشناخته است، پس ربات نمی‌تواند خودش را آپدیت کند.", null, 'HTML');
+        return;
+    }
+    $updateAnswer = nexora_update_bot_start($updateChannel);
+    if (!empty($updateAnswer['ok'])) {
+        $updateLabel = $updateChannel === 'test' ? 'نسخه آزمایشی' : 'نسخه پایدار';
+        sendmessage($from_id, "⬆️ آپدیت ربات روی <b>" . $updateLabel . "</b> شروع شد.\n\nربات تا چند لحظه خاموش می‌شود. برای دیدن وضعیت، دکمه «وضعیت آپدیت» را بزن.", nexora_update_bot_keyboard(), 'HTML');
+    } else {
+        sendmessage($from_id, "❌ آپدیت شروع نشد: " . (string) ($updateAnswer['error'] ?? 'دلیل نامعلوم'), null, 'HTML');
+    }
+    return;
+} elseif ($datain == "adv_update_state" && $adminrulecheck['rule'] == "administrator") {
+    // ---------------- [ the update of the bot: the state ] ----------------
+    if (!nexora_update_bot_ready()) {
+        sendmessage($from_id, "❌ هاب هنوز این ربات را نشناخته است.", null, 'HTML');
+        return;
+    }
+    $updateState = nexora_update_bot_state();
+    $updateStateName = (string) ($updateState['state'] ?? 'idle');
+    $updateStateText = "📄 <b>وضعیت آپدیت ربات</b>\n\n";
+    if ($updateStateName === 'running') {
+        $updateStateText .= "⏳ آپدیت در حال اجراست. لطفاً صفحه را نبندید.";
+    } elseif ($updateStateName === 'done') {
+        $updateStateText .= "✅ آپدیت تمام شد. نسخه تازه: <code>" . htmlspecialchars((string) ($updateState['version'] ?? '—'), ENT_QUOTES, 'UTF-8') . "</code>";
+    } elseif ($updateStateName === 'failed') {
+        $updateStateText .= "❌ آپدیت کامل نشد. لاگ زیر را ببینید.";
+    } else {
+        $updateStateText .= "آپدیتی در جریان نیست.";
+    }
+    if (!empty($updateState['error'])) {
+        $updateStateText .= "\n\n" . htmlspecialchars((string) $updateState['error'], ENT_QUOTES, 'UTF-8');
+    }
+    $updateLog = nexora_update_bot_log((array) $updateState);
+    if ($updateLog !== '') {
+        $updateStateText .= "\n\n<pre>" . htmlspecialchars($updateLog, ENT_QUOTES, 'UTF-8') . "</pre>";
+    }
+    sendmessage($from_id, $updateStateText, nexora_update_bot_keyboard(), 'HTML');
+    return;
+} elseif ($text == $textbotlang['Admin']['btnKeyboard']['updateBot'] && $adminrulecheck['rule'] == "administrator") {
+    // The owner of the bot presses the button of the reply keyboard: the same
+    // screen as the button of the advanced features.
+    global $nexora_channel_stable, $nexora_channel_test;
+    $updateVersion = trim((string) @file_get_contents('version'));
+    $updateText = "⬆️ <b>آپدیت ربات</b>\n\n"
+        . "نسخه هم‌اکنون: <code>" . htmlspecialchars($updateVersion !== '' ? $updateVersion : '—', ENT_QUOTES, 'UTF-8') . "</code>\n"
+        . "نسخه پایدار: <code>" . htmlspecialchars(trim((string) ($nexora_channel_stable ?? '')) ?: '—', ENT_QUOTES, 'UTF-8') . "</code>\n"
+        . "نسخه آزمایشی: <code>" . htmlspecialchars(trim((string) ($nexora_channel_test ?? '')) ?: '—', ENT_QUOTES, 'UTF-8') . "</code>\n\n"
+        . "کدام نسخه می‌خواهی ربات روی آن برود؟ هاب خودش کار را انجام می‌دهد و ربات در این مدت خاموش نمی‌ماند.";
+    if (!nexora_update_bot_ready()) {
+        $updateText .= "\n\n⚠️ هاب هنوز این ربات را نشناخته است. از پنل هاب تب «کانال نسخه‌ها» را باز کن و دکمه «همگام‌سازی» را بزن.";
+    }
+    sendmessage($from_id, $updateText, nexora_update_bot_keyboard(), 'HTML');
+    return;
 } elseif (preg_match('/^adv_(products|categories|panels|gateways|tickets|queue|health|token|colors|agentshop|agentpanel|apps|collab|testservices|topup)$/', $datain, $advancedMatch) && $adminrulecheck['rule'] == "administrator") {
     // ---------------- [ advanced features: details ] ----------------
     $advancedTopic = (string) $advancedMatch[1];

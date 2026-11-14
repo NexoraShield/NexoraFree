@@ -551,7 +551,11 @@ function mini_time_ranges(array $data, string $method): void
     $user_info = select("user", "*", "token", $tokencheck, "select");
     if ($user_info) {
         $setting = select("setting", "*", null, null, "select");
-        if ($setting['statuscategory'] == "offcategory") {
+        $isTestSection = ((string) ($data['id_panel'] ?? '') === NEXORA_TEST_SECTION);
+        // The section of the test has no category of its own: the durations of
+        // the test services come from the test products themselves, so they are
+        // shown even when the categories of the shop are switched off.
+        if (!$isTestSection && $setting['statuscategory'] == "offcategory") {
             echo json_encode(array(
                 'status' => true,
                 'msg' => "Successful",
@@ -561,7 +565,6 @@ function mini_time_ranges(array $data, string $method): void
         }
         $category_time_list = [];
         $panel = select("marzban_panel", "*", "code_panel", $data['id_panel'], "select");
-        $isTestSection = ((string) ($data['id_panel'] ?? '') === NEXORA_TEST_SECTION);
         if (empty($panel) && !$isTestSection) {
             echo json_encode(array(
                 'status' => false,
@@ -572,10 +575,10 @@ function mini_time_ranges(array $data, string $method): void
         if ($isTestSection) {
             // The duration of a test service is counted in hours, so the list
             // is built from the durations the test products really have.
-            $stmt = $pdo->prepare("SELECT (Service_time) FROM product WHERE agent = :agent" . api_test_products_filter($pdo));
+            $stmt = $pdo->prepare("SELECT DISTINCT (Service_time) FROM product WHERE agent = :agent AND status_product = 'active'" . api_test_products_filter($pdo) . " ORDER BY Service_time");
             $stmt->bindValue(':agent', $user_info['agent'], PDO::PARAM_STR);
             $stmt->execute();
-            foreach (array_unique($stmt->fetchAll(PDO::FETCH_COLUMN)) as $hours) {
+            foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $hours) {
                 $hours = (int) $hours;
                 $category_time_list[] = array(
                     'id' => 0,
@@ -735,7 +738,13 @@ function mini_services(array $data, string $method): void
         }
         $category_remark = null;
         $category_remarks = "";
-        $queryParams = [':loc' => $isTestSection ? '' : $panel['name_panel'], ':ag' => $user_info['agent']];
+        // Only the query of the shop knows the place of the panel. The query of
+        // the section of the test has no place at all, so the parameter must
+        // not be given to it: pdo refuses a parameter the query does not know.
+        $queryParams = [':ag' => $user_info['agent']];
+        if (!$isTestSection) {
+            $queryParams[':loc'] = $panel['name_panel'];
+        }
         $selected_category_id = isset($data['category_id']) ? $data['category_id'] : null;
         if (!empty($data['category_id'])) {
             $category_remark = select("category", "*", "id", $data['category_id'], "select");

@@ -30,4 +30,5 @@ return [
     'logs_api',
     'category',
     'reagent_report',
+    'channel_post',
 ];

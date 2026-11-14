@@ -130,7 +130,7 @@ foreach (nexora_color_palette() as $slug => $info) {
       <?php foreach ($topupItems as $item): ?>
         <tr>
           <td><?= nexora_agentshop_preview($item['name'] ?? '', (string) ($item['btn_style'] ?? ''), (string) ($item['btn_emoji_id'] ?? ''), $topupColors) ?></td>
-          <td><?= htmlspecialchars((string) ($item['name'] ?? '')) ?></td>
+          <td><?= function_exists('nexora_emoji_text_to_html') ? nexora_emoji_text_to_html((string) ($item['name'] ?? '')) : htmlspecialchars((string) ($item['name'] ?? '')) ?></td>
           <td><?= number_format((float) ($item['price'] ?? 0)) ?></td>
           <td><?= number_format((float) ($item['credit'] ?? 0)) ?></td>
           <td><?= htmlspecialchars((string) ($item['unit'] ?? '')) ?></td>

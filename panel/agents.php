@@ -339,7 +339,7 @@ else: ?>
                             <td><?= htmlspecialchars((string) ($a['maxbuyagent'] ?? '0')) ?></td>
                             <td><?= number_format((float) ($a['Balance'] ?? 0)) ?></td>
                             <td><?= $hasPanel ? '✅ دارد' : '❌ ندارد' ?></td>
-                            <td><?= $aProduct !== '' ? htmlspecialchars($aProduct) : '<span style="color:var(--mute)">—</span>' ?></td>
+                            <td><?= $aProduct !== '' ? (function_exists('nexora_emoji_text_to_html') ? nexora_emoji_text_to_html($aProduct) : htmlspecialchars($aProduct)) : '<span style="color:var(--mute)">—</span>' ?></td>
                             <td><?= $hasPanel ? safe_date($a['access_created_at'] ?? 0) : '—' ?></td>
                             <td style="font-size:.72rem"><a href="<?= htmlspecialchars($agentPanelLink) ?>" target="_blank" rel="noopener" dir="ltr"><?= htmlspecialchars($agentPanelLink) ?></a></td>
                             <td style="white-space:nowrap">

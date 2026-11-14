@@ -239,6 +239,16 @@ if (!function_exists('nexora_emoji_text_to_html')) {
         if ($text === '') {
             return '';
         }
+        // The name of a product can carry the code of a premium emoji
+        // ("{emoji:slug}"). The bot turns that code into the tag of the emoji
+        // of the bot, so the panel does the same before it draws the picture
+        // of the emoji: the owner sees the name he gave and not the code.
+        if (strpos($text, '{emoji:') !== false && function_exists('nexora_render_text_emoji')) {
+            $rendered = nexora_render_text_emoji($text);
+            if (is_string($rendered) && $rendered !== '') {
+                $text = $rendered;
+            }
+        }
         if (stripos($text, '<tg-emoji') === false) {
             return htmlspecialchars($text);
         }

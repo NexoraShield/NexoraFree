@@ -104,7 +104,7 @@ foreach ($agentAccounts as $agentAccountRow) {
         <tr>
           <td><code><?= htmlspecialchars((string) $agentAccount['id_user']) ?></code></td>
           <td><?= htmlspecialchars((string) ($agentAccount['username'] ?? '—')) ?></td>
-          <td><?= htmlspecialchars((string) ($agentAccount['product'] ?? '—')) ?></td>
+          <td><?= function_exists('nexora_emoji_text_to_html') ? nexora_emoji_text_to_html((string) ($agentAccount['product'] ?? '—')) : htmlspecialchars((string) ($agentAccount['product'] ?? '—')) ?></td>
           <td><b><?= number_format(floatval($agentAccount['credit'] ?? 0)) ?></b></td>
           <td style="font-size:.75rem"><a href="<?= htmlspecialchars($rowLink) ?>" target="_blank" rel="noopener" dir="ltr"><?= htmlspecialchars($rowLink) ?></a></td>
           <td><?= safe_date($agentAccount['created_at'] ?? 0) ?></td>

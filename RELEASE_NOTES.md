@@ -1,5 +1,29 @@
 # Nexora Bot — Release Notes
 
+## v1.22.88 (2026-11-14) — The bot writes a message in a channel and the bot updates itself from inside the bot
+
+**The message of the channel ("متن در کانال")**
+- A new part of the advanced features of the admin menu: the owner of the bot writes a message (a text, with a picture if he wants) and publishes it in one of his channels.
+- The bot asks for the link of the channel and checks it: the bot has to be an administrator of that channel and it has to be allowed to write in it. The reason of every refusal is told to the owner (the link is not a channel, the bot is not an administrator, the bot may not write there).
+- The text of the owner keeps the format of Telegram (bold, italic, links and the premium emoji), and a picture can be sent with the text under it.
+- The eight buttons of the bot can be chosen one by one: every chosen button shows a green sign, every other one a red sign, and pressing a button again takes its sign away. The message is never published twice: the operation is marked before the message goes to the channel.
+- The owner sees a preview of the message (the text, the picture, the chosen buttons and their order) before he publishes it, and he can go back and change the buttons.
+- Every button of the published message has a deep link of its own, so the customer of the channel lands straight in the part of the bot the button belongs to. The standard start of the bot runs first: a customer who has not accepted the rules or has not joined the channels yet gets the start of the bot, and the button runs as soon as the bot is done with him.
+- The buttons are not a second copy of the screens of the bot: the screen of the bot is the one that runs, with the names the owner has chosen.
+- Every operation has an id of its own in the table `channel_post`, so the work of two administrators never mixes, and a broken operation never leaves wrong information behind. Every error is reported in the group of the reports with the step, the channel, the administrator and the reason.
+
+**The bot updates itself from inside the bot**
+- The admin menu of the bot has a new button: "آپدیت ربات". It asks the owner which version he wants (the stable one or the test one) and the hub of the fleet does the work, so the bot is never half written.
+- The owner can follow the log of the update from the bot itself, without waiting in front of a frozen page.
+- The secret of the bot is the one the hub has given to it, so only this bot can ask the hub to update it.
+
+**The web application of the bot**
+- The tab of the services is whole again: the list of the test services no longer breaks the query of the services of the shop.
+- The web panel of the bot shows the buttons of the shop of the bot the same way the bot shows them (the shop of the reseller, the shop of the agent panel and the top up), with the name the owner has chosen.
+- The premium emoji of the names is resolved in the web panel too, so a name that the owner has renamed is shown the way it is shown in the bot.
+
+---
+
 ## v1.22.87 (2026-11-14) — The test services have their own section in the web application and the panel of the bot can update the bot
 
 **The test services are never mixed with the products of the shop**

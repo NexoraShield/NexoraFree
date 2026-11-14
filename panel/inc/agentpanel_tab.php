@@ -40,7 +40,9 @@ function nexora_agentpanel_preview($name, $style, $emoji, $colors): string
 {
     $bg = $colors[$style] ?? 'var(--surface-3)';
     $fg = ($style !== '' && isset($colors[$style])) ? '#fff' : 'inherit';
-    $icon = ($emoji !== '' && $emoji !== null) ? '◆ ' : '';
+    // The premium emoji of the panel is shown as the picture of the emoji, the
+    // same way the reseller shop shows it.
+    $icon = function_exists('nexora_emoji_preview_html') ? nexora_emoji_preview_html((string) $emoji) : '';
     $label = function_exists('nexora_emoji_text_to_html')
         ? nexora_emoji_text_to_html((string) $name)
         : htmlspecialchars((string) $name);
@@ -216,7 +218,7 @@ foreach (nexora_color_palette() as $slug => $info) {
       <?php foreach ($items as $it): ?>
         <tr>
           <td><?= nexora_agentpanel_preview($it['name'] ?? '', (string) ($it['btn_style'] ?? ''), (string) ($it['btn_emoji_id'] ?? ''), $STYLE_COLORS) ?></td>
-          <td><?= htmlspecialchars((string) ($it['name'] ?? '')) ?></td>
+          <td><?= function_exists('nexora_emoji_text_to_html') ? nexora_emoji_text_to_html((string) ($it['name'] ?? '')) : htmlspecialchars((string) ($it['name'] ?? '')) ?></td>
           <td><?= number_format((float) ($it['price'] ?? 0)) ?></td>
           <td><?= number_format((float) ($it['credit'] ?? 0)) ?></td>
           <td style="min-width:240px"><?= nl2br(htmlspecialchars((string) ($it['description'] ?? ''))) ?></td>

@@ -47,6 +47,10 @@ class ManagePanel
         } else {
             $invoice = false;
         }
+        // The product of the test and the product of a custom volume are not
+        // in the table of the products: they are built here, so the array has
+        // to exist before the first key is written into it.
+        $Get_Data_Product = [];
         if (!in_array($code_product, ["usertest", $textbotlang['users']['customSellVolume']['btnVolume'], "customvolume"])) {
 
             $stmt = $pdo->prepare("SELECT * FROM product WHERE (Location = :name_panel OR Location = '/all')  AND code_product = :code_product");

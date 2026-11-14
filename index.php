@@ -13,6 +13,7 @@ require_once 'keyboard.php';
 require_once 'vendor/autoload.php';
 require_once 'panels.php';
 require_once 'agentshop_admin.php';
+require_once 'channel_post_admin.php';
 $textbotlang = languagechange();
 // A premium emoji label is restored to its tagged form, so a button that was
 // renamed still works. While an administrator is typing a new text the
@@ -63,9 +64,15 @@ if (isset($update['chat_member'])) {
             ],
         ]
     ]);
-    if (in_array($status, ['left', 'kicked', 'restricted'])) {
+    if (in_array($status, ['left', 'kicked'])) {
         sendmessage($from_id, $textbotlang['users']['channel']['left_channel'], $keyboard_channel_left, 'html');
         return;
+    }
+    if (in_array($status, ['member', 'creator', 'administrator']) && function_exists('nexora_channel_cache_clear')) {
+        // The customer joined the channel: the answer of Telegram about his
+        // membership is thrown away, so the bot does not tell him that he has
+        // not joined the channel he has just joined.
+        nexora_channel_cache_clear($from_id);
     }
 }
 if (!in_array($Chat_type, ["private", "supergroup"]))
@@ -314,10 +321,18 @@ if (floor($TimeLastMessage / 60) >= 1) {
 // menu: otherwise the menu is opened instead of the text being saved. The
 // original text is restored before the admin section runs.
 $__nexora_adminStepText = null;
-$__nexora_adminSteps = ['get_new_text', 'adv_test_name', 'adv_topup_name', 'adv_topup_button_name', 'get_product_protocol'];
+$__nexora_adminSteps = ['get_new_text', 'adv_test_name', 'adv_topup_name', 'adv_topup_button_name', 'get_product_protocol', 'adv_cp_link', 'adv_cp_content'];
 if ($text !== '' && $Chat_type === 'private' && in_array((string) ($user['step'] ?? ''), $__nexora_adminSteps, true)) {
     $__nexora_adminStepText = $text;
     $text = 'nexora__admin_step__';
+}
+// A message of the channel can bring the customer to the bot: the action of
+// the button waits for the standard start of the bot (the rules and the
+// channels), and it runs as soon as the bot is done with the customer.
+$__nexoraPendingAction = '';
+$__nexoraActionDispatched = false;
+if (preg_match('/^nxcp_action_([a-z_]+)$/', (string) ($user['Processing_value_four'] ?? ''), $__nexoraPendingMatch)) {
+    $__nexoraPendingAction = strtolower((string) $__nexoraPendingMatch[1]);
 }
 
 if ((strpos($text, "/start ") !== false || $text == "/start") && $user['step'] != "gettextSystemMessage") {
@@ -355,6 +370,35 @@ if ((strpos($text, "/start ") !== false || $text == "/start") && $user['step'] !
         }
         // The order is unknown or already paid: the payload is handled like
         // every other start parameter (an invitation code for example).
+    }
+    // The web panel of the bot sends the customer to a shop of the bot with a
+    // link: the customer lands right in the shop of the reseller panel or in
+    // the shop of the agent panel, exactly as he sees them in the bot.
+    if (in_array($affiliatesid, ['agentshop', 'agentpanelshop'], true)) {
+        if (!check_active_btn($setting['keyboardmain'], $affiliatesid === 'agentshop' ? "text_agentshop" : "text_agentpanelshop")) {
+            sendmessage($from_id, $textbotlang['users']['buttonDisabled'], null, 'HTML');
+            return;
+        }
+        $shopScreen = ($affiliatesid === 'agentshop')
+            ? nexora_agent_shop_screen()
+            : nexora_agent_panel_shop_screen();
+        sendmessage($from_id, $shopScreen['text'], $shopScreen['keyboard'], 'HTML');
+        step($affiliatesid . '_list', $from_id);
+        return;
+    }
+    // The messages of the channel carry buttons that bring the customer
+    // straight to a part of the bot: the parameter of the link says which
+    // button it is. The standard start of the bot comes first: if the
+    // customer has not accepted the rules or has not joined the channels
+    // yet, the action waits for the next step of the bot.
+    $__nexoraChannelPostKey = nexora_channel_post_payload_key((string) $affiliatesid);
+    if ($__nexoraChannelPostKey !== null) {
+        update("user", "Processing_value_four", 'nxcp_action_' . $__nexoraChannelPostKey, "id", $from_id);
+        $__nexoraPendingAction = $__nexoraChannelPostKey;
+        nexora_channel_post_run_action((string) $from_id, $__nexoraChannelPostKey);
+        $__nexoraActionDispatched = true;
+        // The parameter is not an invitation code: the flow goes on.
+        $affiliatesid = '';
     }
     if ($affiliatesid !== '' && !in_array($affiliatesid, ['start', "usertest", "/start", "buy", "help"])) {
         isValidInvitationCode($setting, $from_id, $user['verify']);
@@ -415,7 +459,13 @@ if ($text == $textbotlang['keyboard']['acceptRules'] or $datain == "acceptrule")
     sendmessage($from_id, $textbotlang['users']['Rules'], $keyboard, 'html');
     $confrim = true;
     update("user", "roll_Status", $confrim, "id", $from_id);
-    return;
+    // The customer came from a message of the channel: the action of the
+    // button runs now, in the same step.
+    if ($__nexoraPendingAction !== '' && nexora_channel_post_run_action((string) $from_id, $__nexoraPendingAction)) {
+        $__nexoraActionDispatched = true;
+    } else {
+        return;
+    }
 }
 
 #-----------Bot_Status------------#
@@ -464,60 +514,67 @@ if ($user['joinchannel'] != "active") {
                     'show_alert' => false,
                     'cache_time' => 5,
                 ]);
+                // The customer came from a message of the channel: the action
+                // of the button runs now, in the same step.
+                if ($__nexoraPendingAction !== '' && nexora_channel_post_run_action((string) $from_id, $__nexoraPendingAction)) {
+                    $__nexoraActionDispatched = true;
+                } else {
+                    return;
+                }
+            } else {
+                $keyboardchannel = [
+                    'inline_keyboard' => [],
+                ];
+                foreach ($channels as $channel) {
+                    $channelremark = select("channels", "*", 'link', $channel, "select");
+                    if ($channelremark['remark'] == null)
+                        continue;
+                    if ($channelremark['linkjoin'] == null)
+                        continue;
+                    $keyboardchannel['inline_keyboard'][] = [
+                        [
+                            'text' => "{$channelremark['remark']}",
+                            'url' => $channelremark['linkjoin']
+                        ],
+                    ];
+                }
+                $keyboardchannel['inline_keyboard'][] = [['text' => $textbotlang['users']['channel']['confirmjoin'], 'callback_data' => "confirmchannel"]];
+                $keyboardchannel = json_encode($keyboardchannel);
+                Editmessagetext($from_id, $message_id, nexora_channel_missing_message($channels), $keyboardchannel);
+                telegram('answerCallbackQuery', [
+                    'callback_query_id' => $callback_query_id,
+                    'text' => $textbotlang['users']['channel']['notconfirmed'],
+                    'show_alert' => true,
+                    'cache_time' => 5,
+                ]);
+                $partsaffiliates = explode("_", $user['Processing_value_four']);
+                if ($partsaffiliates[0] == "affiliates") {
+                    $affiliatesid = $partsaffiliates[1];
+                    if (!rowExists("user", "id", $affiliatesid)) {
+                        sendmessage($from_id, $textbotlang['users']['affiliates']['affiliatesidyou'], null, 'html');
+                        return;
+                    }
+                    if ($affiliatesid == $from_id) {
+                        sendmessage($from_id, $textbotlang['users']['affiliates']['invalidaffiliates'], null, 'html');
+                        return;
+                    }
+                    $marzbanDiscountaffiliates = select("affiliates", "*", null, null, "select");
+                    $useraffiliates = select("user", "*", 'id', $affiliatesid, "select");
+                    if ($marzbanDiscountaffiliates['Discount'] == "onDiscountaffiliates") {
+                        $marzbanDiscountaffiliates = select("affiliates", "*", null, null, "select");
+                        $Balance_add_user = $useraffiliates['Balance'] + $marzbanDiscountaffiliates['price_Discount'];
+                        addBalance($affiliatesid, $marzbanDiscountaffiliates['price_Discount']);
+                        $addbalancediscount = number_format($marzbanDiscountaffiliates['price_Discount'], 0);
+                        sendmessage($affiliatesid, strtr($textbotlang['users']['affiliates']['balanceGift'], ['{addbalancediscount}' => $addbalancediscount, '{from_id}' => $from_id]), null, 'html');
+                    }
+                    sendmessage($from_id, $textbotlang['users']['text_start'], $keyboard, 'html');
+                    $addcountaffiliates = intval($useraffiliates['affiliatescount']) + 1;
+                    update("user", "affiliates", $affiliatesid, "id", $from_id);
+                    update("user", "Processing_value_four", "none", "id", $from_id);
+                    update("user", "affiliatescount", $addcountaffiliates, "id", $affiliatesid);
+                }
                 return;
             }
-            $keyboardchannel = [
-                'inline_keyboard' => [],
-            ];
-            foreach ($channels as $channel) {
-                $channelremark = select("channels", "*", 'link', $channel, "select");
-                if ($channelremark['remark'] == null)
-                    continue;
-                if ($channelremark['linkjoin'] == null)
-                    continue;
-                $keyboardchannel['inline_keyboard'][] = [
-                    [
-                        'text' => "{$channelremark['remark']}",
-                        'url' => $channelremark['linkjoin']
-                    ],
-                ];
-            }
-            $keyboardchannel['inline_keyboard'][] = [['text' => $textbotlang['users']['channel']['confirmjoin'], 'callback_data' => "confirmchannel"]];
-            $keyboardchannel = json_encode($keyboardchannel);
-            Editmessagetext($from_id, $message_id, $textbotlang['textbot']['channel'], $keyboardchannel);
-            telegram('answerCallbackQuery', [
-                'callback_query_id' => $callback_query_id,
-                'text' => $textbotlang['users']['channel']['notconfirmed'],
-                'show_alert' => true,
-                'cache_time' => 5,
-            ]);
-            $partsaffiliates = explode("_", $user['Processing_value_four']);
-            if ($partsaffiliates[0] == "affiliates") {
-                $affiliatesid = $partsaffiliates[1];
-                if (!rowExists("user", "id", $affiliatesid)) {
-                    sendmessage($from_id, $textbotlang['users']['affiliates']['affiliatesidyou'], null, 'html');
-                    return;
-                }
-                if ($affiliatesid == $from_id) {
-                    sendmessage($from_id, $textbotlang['users']['affiliates']['invalidaffiliates'], null, 'html');
-                    return;
-                }
-                $marzbanDiscountaffiliates = select("affiliates", "*", null, null, "select");
-                $useraffiliates = select("user", "*", 'id', $affiliatesid, "select");
-                if ($marzbanDiscountaffiliates['Discount'] == "onDiscountaffiliates") {
-                    $marzbanDiscountaffiliates = select("affiliates", "*", null, null, "select");
-                    $Balance_add_user = $useraffiliates['Balance'] + $marzbanDiscountaffiliates['price_Discount'];
-                    addBalance($affiliatesid, $marzbanDiscountaffiliates['price_Discount']);
-                    $addbalancediscount = number_format($marzbanDiscountaffiliates['price_Discount'], 0);
-                    sendmessage($affiliatesid, strtr($textbotlang['users']['affiliates']['balanceGift'], ['{addbalancediscount}' => $addbalancediscount, '{from_id}' => $from_id]), null, 'html');
-                }
-                sendmessage($from_id, $textbotlang['users']['text_start'], $keyboard, 'html');
-                $addcountaffiliates = intval($useraffiliates['affiliatescount']) + 1;
-                update("user", "affiliates", $affiliatesid, "id", $from_id);
-                update("user", "Processing_value_four", "none", "id", $from_id);
-                update("user", "affiliatescount", $addcountaffiliates, "id", $affiliatesid);
-            }
-            return;
         }
         if (count($channels) != 0 && !in_array($from_id, $admin_ids)) {
             $keyboardchannel = [
@@ -538,10 +595,17 @@ if ($user['joinchannel'] != "active") {
             }
             $keyboardchannel['inline_keyboard'][] = [['text' => $textbotlang['users']['channel']['confirmjoin'], 'callback_data' => "confirmchannel"]];
             $keyboardchannel = json_encode($keyboardchannel);
-            sendmessage($from_id, $textbotlang['textbot']['channel'], $keyboardchannel, 'html');
+            sendmessage($from_id, nexora_channel_missing_message($channels), $keyboardchannel, 'html');
             return;
         }
     }
+}
+// The action of the button of the message of the channel is about to run (the
+// gates of the bot let the customer through): the waiting is over and the
+// marker of the database is not needed any more.
+if ($__nexoraActionDispatched) {
+    update("user", "Processing_value_four", '', "id", $from_id);
+    $__nexoraActionDispatched = false;
 }
 if ($text == "/start" || $datain == "start" || $text == "start") {
     sendmessage($from_id, $textbotlang['users']['text_start'], $keyboard, "html");
@@ -6633,34 +6697,10 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         sendmessage($from_id, $textbotlang['users']['buttonDisabled'], null, 'HTML');
         return;
     }
-    $agentStmt = $pdo->prepare("SELECT * FROM product WHERE agent = 'agentshop' AND status_product = 'active' ORDER BY display_order, id");
-    $agentStmt->execute();
-    $agentItems = $agentStmt->fetchAll(PDO::FETCH_ASSOC);
-    $agentRows = [];
-    $agentShowPrice = getShopSetting("statusshowprice")['value'] != "offshowprice";
-    foreach ($agentItems as $agentItem) {
-        $agentLabel = (string) $agentItem['name_product'];
-        if ($agentShowPrice) {
-            $agentLabel .= " - " . number_format($agentItem['price_product']) . $textbotlang['common']['labels']['tomanUnit'];
-        }
-        $agentRows[] = [nexora_style_btn($agentLabel, "agentshop_select_" . $agentItem['code_product'], $agentItem)];
-    }
-    $agentRows[] = [['text' => $textbotlang['users']['backbtn'], 'callback_data' => "backuser"]];
-    $agentTopup = nexora_topup_button('agentshop');
-    $agentRows[] = [nexora_style_btn($agentTopup['label'], "topup_agentshop", ['btn_style' => $agentTopup['style']])];
-    $agentKeyboard = json_encode(['inline_keyboard' => $agentRows]);
-    $agentIntro = (string) ($textbotlang['users']['agentShop']['intro'] ?? '');
-    // The note tells the customer the difference between the two panel shops.
-    if (!empty($textbotlang['users']['agentShop']['note'])) {
-        $agentIntro .= "\n\n" . $textbotlang['users']['agentShop']['note'];
-    }
-    if (!empty($textbotlang['users']['agentShop']['choose'])) {
-        $agentIntro .= "\n\n" . $textbotlang['users']['agentShop']['choose'];
-    }
-    $agentIntro .= "\n\n" . (string) ($textbotlang['users']['agentShop']['steps'] ?? '');
-    if (!$agentItems) {
-        $agentIntro = $textbotlang['users']['agentShop']['empty'] . "\n\n" . $agentIntro;
-    }
+    $agentScreen = nexora_agent_shop_screen();
+    $agentItems = $agentScreen['items'];
+    $agentKeyboard = $agentScreen['keyboard'];
+    $agentIntro = $agentScreen['text'];
     if ($datain == "agentshop") {
         Editmessagetext($from_id, $message_id, $agentIntro, $agentKeyboard, 'HTML');
     } else {
@@ -6784,32 +6824,10 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         sendmessage($from_id, $textbotlang['users']['buttonDisabled'], null, 'HTML');
         return;
     }
-    $agentPanelItems = nexora_agent_panel_products(true);
-    $agentPanelRows = [];
-    $agentPanelShowPrice = getShopSetting("statusshowprice")['value'] != "offshowprice";
-    foreach ($agentPanelItems as $agentPanelItem) {
-        $agentPanelLabel = (string) $agentPanelItem['name'];
-        if ($agentPanelShowPrice) {
-            $agentPanelLabel .= " - " . number_format($agentPanelItem['price']) . $textbotlang['common']['labels']['tomanUnit'];
-        }
-        $agentPanelRows[] = [nexora_style_btn($agentPanelLabel, "agentpanelshop_select_" . (int) $agentPanelItem['id'], $agentPanelItem)];
-    }
-    $agentPanelRows[] = [['text' => $textbotlang['users']['backbtn'], 'callback_data' => "backuser"]];
-    $agentPanelTopup = nexora_topup_button('agentpanelshop');
-    $agentPanelRows[] = [nexora_style_btn($agentPanelTopup['label'], "topup_agentpanelshop", ['btn_style' => $agentPanelTopup['style']])];
-    $agentPanelKeyboard = json_encode(['inline_keyboard' => $agentPanelRows]);
-    $agentPanelIntro = (string) ($textbotlang['users']['agentPanelShop']['intro'] ?? '');
-    // The note tells the customer the difference between the two panel shops.
-    if (!empty($textbotlang['users']['agentPanelShop']['note'])) {
-        $agentPanelIntro .= "\n\n" . $textbotlang['users']['agentPanelShop']['note'];
-    }
-    if (!empty($textbotlang['users']['agentPanelShop']['choose'])) {
-        $agentPanelIntro .= "\n\n" . $textbotlang['users']['agentPanelShop']['choose'];
-    }
-    $agentPanelIntro .= "\n\n" . (string) ($textbotlang['users']['agentPanelShop']['steps'] ?? '');
-    if (!$agentPanelItems) {
-        $agentPanelIntro = $textbotlang['users']['agentPanelShop']['empty'] . "\n\n" . $agentPanelIntro;
-    }
+    $agentPanelScreen = nexora_agent_panel_shop_screen();
+    $agentPanelItems = $agentPanelScreen['items'];
+    $agentPanelKeyboard = $agentPanelScreen['keyboard'];
+    $agentPanelIntro = $agentPanelScreen['text'];
     if ($datain == "agentpanelshop") {
         Editmessagetext($from_id, $message_id, $agentPanelIntro, $agentPanelKeyboard, 'HTML');
     } else {
