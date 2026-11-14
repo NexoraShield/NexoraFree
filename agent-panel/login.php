@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800;900&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Estedad:wght@700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="reseller-panel.css?v=9">
+<link rel="stylesheet" href="reseller-panel.css?v=11">
 <link rel="stylesheet" href="beauty.css?v=12">
 <link rel="stylesheet" href="mobile.css?v=13">
 <style>
