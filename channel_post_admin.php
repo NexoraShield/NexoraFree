@@ -331,9 +331,11 @@ if (!function_exists('nexora_channel_post_check_channel')) {
             return ['ok' => false, 'chat_id' => (string) $chatId, 'title' => '', 'error' => 'کانال پیدا نشد: ' . $reason];
         }
         $info = is_array($chat['result'] ?? null) ? $chat['result'] : [];
-        $isChannel = !empty($info['is_channel']) || !empty($info['is_supergroup']);
+        // A channel, a group or a supergroup: the bot may write in all of
+        // them, when it is their administrator.
+        $isChannel = !empty($info['is_channel']) || !empty($info['is_supergroup']) || !empty($info['is_group']);
         if (!$isChannel) {
-            return ['ok' => false, 'chat_id' => (string) $chatId, 'title' => '', 'error' => 'این گفتگو یک کانال نیست.'];
+            return ['ok' => false, 'chat_id' => (string) $chatId, 'title' => '', 'error' => 'این گفتگو یک گروه یا کانال نیست.'];
         }
         $title = (string) ($info['title'] ?? '');
 
@@ -347,8 +349,8 @@ if (!function_exists('nexora_channel_post_check_channel')) {
 
         $admins = telegram('getChatAdministrators', ['chat_id' => $chatId]);
         if (empty($admins['ok'])) {
-            $reason = (string) ($admins['description'] ?? 'دسترسی به مدیران کانال ممکن نشد.');
-            return ['ok' => false, 'chat_id' => (string) $chatId, 'title' => $title, 'error' => 'ربات در این کانال ادمین نیست: ' . $reason];
+            $reason = (string) ($admins['description'] ?? 'دسترسی به مدیران گروه ممکن نشد.');
+            return ['ok' => false, 'chat_id' => (string) $chatId, 'title' => $title, 'error' => 'ربات در این گروه ادمین نیست: ' . $reason];
         }
         $list = is_array($admins['result'] ?? null) ? $admins['result'] : [];
         $isAdmin = false;
@@ -367,10 +369,10 @@ if (!function_exists('nexora_channel_post_check_channel')) {
             break;
         }
         if (!$isAdmin) {
-            return ['ok' => false, 'chat_id' => (string) $chatId, 'title' => $title, 'error' => 'ربات ادمین این کانال نیست.'];
+            return ['ok' => false, 'chat_id' => (string) $chatId, 'title' => $title, 'error' => 'ربات ادمین این گروه نیست.'];
         }
         if (!$canPost) {
-            return ['ok' => false, 'chat_id' => (string) $chatId, 'title' => $title, 'error' => 'ربات اجازه ارسال پیام در این کانال را ندارد.'];
+            return ['ok' => false, 'chat_id' => (string) $chatId, 'title' => $title, 'error' => 'ربات اجازه ارسال پیام در این گروه را ندارد.'];
         }
 
         return ['ok' => true, 'chat_id' => (string) $chatId, 'title' => $title, 'error' => ''];
