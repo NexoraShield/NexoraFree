@@ -332,8 +332,11 @@ if (!function_exists('nexora_channel_post_check_channel')) {
         }
         $info = is_array($chat['result'] ?? null) ? $chat['result'] : [];
         // A channel, a group or a supergroup: the bot may write in all of
-        // them, when it is their administrator.
-        $isChannel = !empty($info['is_channel']) || !empty($info['is_supergroup']) || !empty($info['is_group']);
+        // them, when it is their administrator. The kind of the chat is in
+        // the "type" of the answer of Telegram; the flags are only a help.
+        $type = (string) ($info['type'] ?? '');
+        $isChannel = in_array($type, ['channel', 'supergroup', 'group'], true)
+            || !empty($info['is_channel']) || !empty($info['is_supergroup']) || !empty($info['is_group']);
         if (!$isChannel) {
             return ['ok' => false, 'chat_id' => (string) $chatId, 'title' => '', 'error' => 'این گفتگو یک گروه یا کانال نیست.'];
         }
