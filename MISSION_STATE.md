@@ -33,8 +33,14 @@ gets a reaction and the bot is faster on a small server.
   asked for the links when they are really needed and the answer never waits longer than 20 seconds;
 - the windows never hide themselves: the movement only moves them, so a browser that pauses the
   movement (a window in the background) still shows the whole window;
+- the window of a user never waits forever (the request is stopped after 45 seconds) and it can
+  always be opened again;
 - tested: 19 checks of the report of a customer (sqlite, green), 4 phases of the window in the
-  browser (green), `php -l` clean on every changed file, `node --check` clean on the new script.
+  browser (green), `php -l` clean on every changed file, `node --check` clean on the new script;
+- **deployed on the hub**: all six bots (arvanbot, mikhvpn, arvanpro, kovpn, ostovar, greenvpn)
+  are on v1.22.86 (the update button of the dashboard of the hub pulls the code from GitHub).
+  The new `agent-panel/customer-info.php` answers with a 401 and a Persian message when nobody is
+  logged in, so the links of an agent are never seen from the outside.
 
 **v1.22.84** — the premium emoji of the shops is applied and the pie charts of the reports are drawn right:
 - the code of an emoji (`{emoji:tun}`) is opened by `nexora_emoji_lookup()`, so the emoji of the reseller
