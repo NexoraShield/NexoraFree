@@ -62,7 +62,14 @@ try {
     // The operations of the messages of the channel: every operation of the
     // administrator has a row of its own, so two administrators never step on
     // each other and a half finished operation can always be found again.
-    $pdo->exec("CREATE TABLE IF NOT EXISTS channel_post (id INT AUTO_INCREMENT PRIMARY KEY, op_id VARCHAR(64) NOT NULL, admin_id VARCHAR(64) NOT NULL, channel_link VARCHAR(255) NOT NULL DEFAULT '', channel_chat_id VARCHAR(64) NOT NULL DEFAULT '', channel_title VARCHAR(255) NOT NULL DEFAULT '', content_type VARCHAR(16) NOT NULL DEFAULT 'text', message_text TEXT NULL, file_id VARCHAR(255) NOT NULL DEFAULT '', buttons TEXT NOT NULL, status VARCHAR(20) NOT NULL DEFAULT 'draft', published_message_id VARCHAR(64) NOT NULL DEFAULT '', last_error TEXT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, published_at TIMESTAMP NULL DEFAULT NULL, INDEX idx_admin (admin_id, status)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS channel_post (id INT AUTO_INCREMENT PRIMARY KEY, op_id VARCHAR(64) NOT NULL, admin_id VARCHAR(64) NOT NULL, channel_link VARCHAR(255) NOT NULL DEFAULT '', channel_chat_id VARCHAR(64) NOT NULL DEFAULT '', channel_title VARCHAR(255) NOT NULL DEFAULT '', content_type VARCHAR(16) NOT NULL DEFAULT 'text', message_text TEXT NULL, file_id VARCHAR(255) NOT NULL DEFAULT '', buttons VARCHAR(2000) NOT NULL DEFAULT '[]', status VARCHAR(20) NOT NULL DEFAULT 'draft', published_message_id VARCHAR(64) NOT NULL DEFAULT '', last_error TEXT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, published_at TIMESTAMP NULL DEFAULT NULL, INDEX idx_admin (admin_id, status)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    // An older bot has the column of the buttons without a default: the
+    // column is made wider and it gets its default.
+    try {
+        $pdo->exec("ALTER TABLE channel_post MODIFY buttons VARCHAR(2000) NOT NULL DEFAULT '[]'");
+    } catch (Throwable $e) {
+        echo "the table of the operations keeps its shape: " . $e->getMessage() . "\n";
+    }
     echo "channel_post table ensured.\n";
     if ($added === []) echo "Columns already exist — nothing to do.\n";
     else echo "Added columns: " . implode(', ', $added) . "\n";

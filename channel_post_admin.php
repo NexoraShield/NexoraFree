@@ -45,7 +45,7 @@ if (!function_exists('nexora_channel_post_table')) {
                 content_type VARCHAR(16) NOT NULL DEFAULT 'text',
                 message_text TEXT NULL,
                 file_id VARCHAR(255) NOT NULL DEFAULT '',
-                buttons TEXT NOT NULL DEFAULT '[]',
+                buttons VARCHAR(2000) NOT NULL DEFAULT '[]',
                 status VARCHAR(20) NOT NULL DEFAULT 'draft',
                 published_message_id VARCHAR(64) NOT NULL DEFAULT '',
                 last_error TEXT NULL,
@@ -212,7 +212,7 @@ if (!function_exists('nexora_channel_post_create')) {
         }
         $opId = 'op_' . bin2hex(random_bytes(8));
         try {
-            $stmt = $pdo->prepare("INSERT INTO channel_post (op_id, admin_id, status, created_at) VALUES (?, ?, 'draft', NOW())");
+            $stmt = $pdo->prepare("INSERT INTO channel_post (op_id, admin_id, status, buttons, created_at) VALUES (?, ?, 'draft', '[]', NOW())");
             $stmt->execute([$opId, (string) $adminId]);
             $id = (int) $pdo->lastInsertId();
         } catch (Throwable $e) {
