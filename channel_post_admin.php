@@ -246,6 +246,7 @@ if (!function_exists('nexora_channel_post_save')) {
         global $pdo;
         nexora_channel_post_table();
         try {
+            $publishedAt = trim((string) ($op['published_at'] ?? ''));
             $stmt = $pdo->prepare("UPDATE channel_post SET channel_link = ?, channel_chat_id = ?, channel_title = ?, content_type = ?, message_text = ?, file_id = ?, buttons = ?, status = ?, published_message_id = ?, last_error = ?, published_at = COALESCE(?, published_at) WHERE id = ?");
             $stmt->execute([
                 (string) ($op['channel_link'] ?? ''),
@@ -258,7 +259,7 @@ if (!function_exists('nexora_channel_post_save')) {
                 (string) ($op['status'] ?? 'draft'),
                 (string) ($op['published_message_id'] ?? ''),
                 (string) ($op['last_error'] ?? ''),
-                (string) ($op['published_at'] ?? ''),
+                $publishedAt !== '' ? $publishedAt : null,
                 (int) ($op['id'] ?? 0),
             ]);
         } catch (Throwable $e) {
