@@ -68,6 +68,39 @@ $initials = mb_strtoupper(mb_substr($currentUser, 0, 1, 'UTF-8'), 'UTF-8');
 
 <body>
 
+  <!-- The splash of the panel: the mark of Nexora turns while the page is
+       loaded (when the owner changes the bot, the panel of the other one
+       comes with this mark until it is ready). -->
+  <div id="nx-splash" aria-hidden="true">
+    <div class="nx-splash-mark">
+      <img src="assets/nexora-logo-icon.png" alt="Nexora">
+      <span class="nx-splash-ring"></span>
+    </div>
+    <div class="nx-splash-name">Nexora</div>
+    <div class="nx-splash-bar"><span></span></div>
+  </div>
+
+  <script>
+    (function () {
+      var splash = document.getElementById('nx-splash');
+      if (!splash) { return; }
+      var hide = function () { splash.classList.add('gone'); };
+      var done = false;
+      var finish = function () {
+        if (done) { return; }
+        done = true;
+        hide();
+      };
+      // The mark stays a moment, so it does not flash on a fast page.
+      setTimeout(finish, 1200);
+      if (document.readyState === 'complete') {
+        setTimeout(finish, 120);
+      } else {
+        window.addEventListener('load', function () { setTimeout(finish, 120); });
+      }
+    }());
+  </script>
+
   <div id="load-bar"></div>
   <div id="toast-area"></div>
 

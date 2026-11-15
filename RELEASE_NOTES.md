@@ -1,5 +1,12 @@
 # Nexora Bot — Release Notes
 
+## v1.23.04 (2026-11-15) — The mark of Nexora turns while the panel loads
+
+- The panel of the bot starts with the mark of Nexora: the shield turns, the light breathes and a thin line of light runs under it. It goes away as soon as the page is ready (the panel of the bot that is opened from the hub comes with this mark until it is loaded).
+
+---
+
+
 ## v1.23.03 (2026-11-15) — The report of the test service goes to the group again
 
 - The test service of the web panel sent the report of the error to the group, but not the report of the success: the administrator never saw the test accounts that were made. The report of the success is in the group again (in the topic of the test accounts), with the same text as the test account of the panel.
