@@ -163,6 +163,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
         header('Location: ' . $panelTab);
         exit;
     }
+    if ($action === 'ap_move') {
+        $orderId = (int) ($_POST['id'] ?? 0);
+        $orderDir = (string) ($_POST['dir'] ?? '');
+        if ($orderId > 0 && ($orderDir === 'up' || $orderDir === 'down')) {
+            try {
+                $orderRows = array_map('intval', array_column(db_fetchAll($pdo, "SELECT id FROM agent_panel_product ORDER BY display_order, id"), 'id'));
+                $orderIndex = array_search($orderId, $orderRows, true);
+                if ($orderIndex !== false) {
+                    $orderTarget = ($orderDir === 'up') ? $orderIndex - 1 : $orderIndex + 1;
+                    if ($orderTarget >= 0 && $orderTarget < count($orderRows)) {
+                        move_display_order($pdo, 'agent_panel_product', $orderId, $orderTarget + 1, $orderRows);
+                        flash('success', 'ترتیب نمایش پنل نمایندگی تغییر کرد.');
+                    }
+                }
+            } catch (Throwable $e) {
+                error_log('agentpanel_tab (move): ' . $e->getMessage());
+            }
+        }
+        header('Location: ' . $panelTab);
+        exit;
+    }
     if ($action === 'ap_delete') {
         try {
             db_query($pdo, "DELETE FROM agent_panel_product WHERE id = ?", [(int) ($_POST['edit_id'] ?? 0)]);
@@ -224,7 +245,10 @@ foreach (nexora_color_palette() as $slug => $info) {
       <?php if (!$items): ?>
         <tr><td colspan="10" style="text-align:center;color:var(--mute);padding:22px">هنوز پنلی برای فروش به نمایندگان تعریف نشده است.</td></tr>
       <?php endif; ?>
-      <?php foreach ($items as $it): ?>
+      <?php $ordIndex = 0;
+      foreach ($items as $it):
+        $ordIndex++;
+      ?>
         <tr>
           <td><?= nexora_agentpanel_preview($it['name'] ?? '', (string) ($it['btn_style'] ?? ''), (string) ($it['btn_emoji_id'] ?? ''), $STYLE_COLORS) ?></td>
           <td><?= function_exists('nexora_emoji_text_to_html') ? nexora_emoji_text_to_html((string) ($it['name'] ?? '')) : htmlspecialchars((string) ($it['name'] ?? '')) ?></td>
@@ -234,7 +258,17 @@ foreach (nexora_color_palette() as $slug => $info) {
           <td><span class="pill"><?= htmlspecialchars((string) ($it['btn_style'] ?? 'پیش‌فرض')) ?></span></td>
           <td><?= nexora_emoji_preview_html((string) ($it['btn_emoji_id'] ?? '')) ?: '<span class="cf">—</span>' ?></td>
           <td><?= ($it['status_product'] ?? 'active') === 'active' ? '✅ فعال' : '⛔️ پنهان' ?></td>
-          <td><?= (int) ($it['display_order'] ?? 0) ?></td>
+          <td>
+            <form method="POST" class="ord-form">
+              <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+              <input type="hidden" name="action" value="ap_move">
+              <input type="hidden" name="id" value="<?= (int) $it['id'] ?>">
+              <button class="ord-btn" type="submit" name="dir" value="up" title="یک پله بالاتر"
+                <?= $ordIndex <= 1 ? 'disabled' : '' ?>><?= nexora_order_icon('up') ?></button>
+              <button class="ord-btn" type="submit" name="dir" value="down" title="یک پله پایین‌تر"
+                <?= $ordIndex >= count($items) ? 'disabled' : '' ?>><?= nexora_order_icon('down') ?></button>
+            </form>
+          </td>
           <td style="white-space:nowrap">
             <button class="btn btn-primary btn-sm" type="button" onclick='openEditAgentPanel(<?= json_encode([
                 'id' => (int) $it['id'],
@@ -246,7 +280,7 @@ foreach (nexora_color_palette() as $slug => $info) {
                 'btn_style' => (string) ($it['btn_style'] ?? ''),
                 'btn_emoji_id' => (string) ($it['btn_emoji_id'] ?? ''),
                 'status_product' => (string) ($it['status_product'] ?? 'active'),
-                'position' => (int) ($it['display_order'] ?? 0),
+                'position' => $ordIndex,
             ], JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>✏️ ویرایش</button>
             <a class="btn btn-no btn-sm" href="<?= htmlspecialchars($panelTab) ?>&delete=<?= (int) $it['id'] ?>&_csrf=<?= csrf_token() ?>" data-confirm="این پنل حذف شود؟">حذف</a>
           </td>

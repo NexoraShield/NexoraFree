@@ -101,10 +101,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
         $reference = trim($_POST['protocol_account'] ?? '');
         // The panel of the test service never goes away: an empty field means
         // that the panel was not changed, not that the test has no panel. The
-        // same for the account the administrator named.
-        if ($panel === '' && !empty($_POST['edit_id'])) {
+        // same for the account the administrator named: an empty box keeps
+        // the account the row already has.
+        if (!empty($_POST['edit_id'])) {
             $current = db_fetch($pdo, "SELECT Location, protocol_account FROM product WHERE id = ?", [(int) $_POST['edit_id']]);
-            $panel = (string) ($current['Location'] ?? '');
+            if ($panel === '') {
+                $panel = (string) ($current['Location'] ?? '');
+            }
             if ($reference === '') {
                 $reference = (string) ($current['protocol_account'] ?? '');
             }

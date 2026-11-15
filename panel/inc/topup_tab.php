@@ -36,7 +36,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
             $style = nexora_agentshop_clean_style($_POST['btn_style'] ?? '');
             $emoji = nexora_agentshop_clean_emoji($_POST['btn_emoji_id'] ?? '');
             $price = (int) ($_POST['topup_price'] ?? 0);
-            $credit = (int) ($_POST['topup_credit'] ?? 0);
+            // The credit of the panel is not written by this form: the
+            // credit of a package that is delivered by hand is a volume
+            // (a terabyte for example), and it is defined in the panel
+            // itself. The row keeps the credit it has.
+            $credit = 0;
             $description = (string) ($_POST['topup_description'] ?? '');
             $unit = trim((string) ($_POST['topup_unit'] ?? ''));
             try {
@@ -51,6 +55,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
                     flash('success', 'گزینه شارژ اضافه شد.');
                 } else {
                     $id = (int) ($_POST['edit_id'] ?? 0);
+                    // The credit is not written by this form: the row keeps
+                    // the credit it has.
+                    $creditRow = db_fetch($pdo, "SELECT credit FROM panel_topup_product WHERE id = ? AND shop = ?", [$id, $topupShop]);
+                    $credit = (float) ($creditRow['credit'] ?? 0);
                     db_query(
                         $pdo,
                         "UPDATE panel_topup_product SET name=?,price=?,credit=?,description=?,unit=?,status_product=?,btn_style=?,btn_emoji_id=? WHERE id=? AND shop=?",
@@ -71,6 +79,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
                 }
             } catch (Throwable $e) {
                 flash('error', 'خطای دیتابیس: ' . $e->getMessage());
+            }
+        }
+    } elseif ($action === 'topup_move') {
+        $orderId = (int) ($_POST['id'] ?? 0);
+        $orderDir = (string) ($_POST['dir'] ?? '');
+        if ($orderId > 0 && ($orderDir === 'up' || $orderDir === 'down')) {
+            try {
+                $orderRows = array_map('intval', array_column(db_fetchAll($pdo, "SELECT id FROM panel_topup_product WHERE shop = ? ORDER BY display_order, id", [$topupShop]), 'id'));
+                $orderIndex = array_search($orderId, $orderRows, true);
+                if ($orderIndex !== false) {
+                    $orderTarget = ($orderDir === 'up') ? $orderIndex - 1 : $orderIndex + 1;
+                    if ($orderTarget >= 0 && $orderTarget < count($orderRows)) {
+                        move_display_order($pdo, 'panel_topup_product', $orderId, $orderTarget + 1, $orderRows);
+                        flash('success', 'ترتیب نمایش گزینه‌های شارژ تغییر کرد.');
+                    }
+                }
+            } catch (Throwable $e) {
+                error_log('topup_tab (move): ' . $e->getMessage());
             }
         }
     } elseif ($action === 'topup_delete') {
@@ -118,16 +144,19 @@ foreach (nexora_color_palette() as $slug => $info) {
 
 <div class="card fade-up d1" style="margin-bottom:18px">
   <div class="card-head"><div><div class="card-title">💳 گزینه‌های شارژ</div>
-    <div class="card-subtitle">هر گزینه یک مبلغ پرداختی و یک اعتبار داخل پنل دارد. پس از پرداخت، اعتبار به کیف پول مشتری اضافه می‌شود.</div></div>
+    <div class="card-subtitle">هر گزینه یک مبلغ پرداختی دارد؛ همان مبلغی که ربات از مشتری می‌گیرد. اعتبار (حجم) پنل خودتان در پنل تعریف شده است و محصول را دستی به مشتری تحویل می‌دهید.</div></div>
     <div><button class="btn btn-primary" onclick="openModal('addTopupModal')"><?= icon('plus', 14) ?> افزودن گزینه</button></div>
   </div>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>پیش‌نمایش</th><th>نام</th><th>مبلغ</th><th>اعتبار</th><th>واحد</th><th>توضیحات</th><th>رنگ</th><th>ایموجی</th><th>وضعیت</th><th></th></tr></thead>
+    <thead><tr><th>پیش‌نمایش</th><th>نام</th><th>مبلغ</th><th>اعتبار</th><th>واحد</th><th>توضیحات</th><th>رنگ</th><th>ایموجی</th><th>وضعیت</th><th>ترتیب</th><th></th></tr></thead>
     <tbody>
       <?php if (!$topupItems): ?>
-        <tr><td colspan="10" style="text-align:center;color:var(--mute);padding:22px">هنوز گزینه‌ای برای شارژ تعریف نشده است.</td></tr>
+        <tr><td colspan="11" style="text-align:center;color:var(--mute);padding:22px">هنوز گزینه‌ای برای شارژ تعریف نشده است.</td></tr>
       <?php endif; ?>
-      <?php foreach ($topupItems as $item): ?>
+      <?php $ordIndex = 0;
+      foreach ($topupItems as $item):
+        $ordIndex++;
+      ?>
         <tr>
           <td><?= nexora_agentshop_preview($item['name'] ?? '', (string) ($item['btn_style'] ?? ''), (string) ($item['btn_emoji_id'] ?? ''), $topupColors) ?></td>
           <td><?= function_exists('nexora_emoji_text_to_html') ? nexora_emoji_text_to_html((string) ($item['name'] ?? '')) : htmlspecialchars((string) ($item['name'] ?? '')) ?></td>
@@ -138,6 +167,17 @@ foreach (nexora_color_palette() as $slug => $info) {
           <td><span class="pill"><?= htmlspecialchars((string) ($item['btn_style'] ?? 'پیش‌فرض')) ?></span></td>
           <td><?= nexora_emoji_preview_html((string) ($item['btn_emoji_id'] ?? '')) ?: '<span class="cf">—</span>' ?></td>
           <td><?= ($item['status_product'] ?? 'active') === 'active' ? '✅ فعال' : '⛔️ پنهان' ?></td>
+          <td>
+            <form method="POST" class="ord-form">
+              <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+              <input type="hidden" name="action" value="topup_move">
+              <input type="hidden" name="id" value="<?= (int) $item['id'] ?>">
+              <button class="ord-btn" type="submit" name="dir" value="up" title="یک پله بالاتر"
+                <?= $ordIndex <= 1 ? 'disabled' : '' ?>><?= nexora_order_icon('up') ?></button>
+              <button class="ord-btn" type="submit" name="dir" value="down" title="یک پله پایین‌تر"
+                <?= $ordIndex >= count($topupItems) ? 'disabled' : '' ?>><?= nexora_order_icon('down') ?></button>
+            </form>
+          </td>
           <td style="white-space:nowrap">
             <button class="btn btn-primary btn-sm" type="button" onclick='openEditTopup(<?= json_encode([
                 'id' => (int) $item['id'],
@@ -175,8 +215,8 @@ foreach (nexora_color_palette() as $slug => $info) {
         <input type="hidden" name="action" value="topup_add">
         <div class="form-grid">
           <label class="field"><span>نام گزینه (مثلاً: شارژ یک میلیونی)</span><input class="input" name="topup_name" required></label>
-          <label class="field"><span>مبلغ پرداختی (تومان)</span><input class="input" type="number" name="topup_price" value="0" required></label>
-          <label class="field"><span>اعتبار داخل پنل (تومان)</span><input class="input" type="number" name="topup_credit" value="1000000" required></label>
+          <label class="field"><span>مبلغ پرداختی (تومان)</span><input class="input" type="number" name="topup_price" value="0" required>
+            <small style="display:block;color:var(--mute);font-size:.72rem;margin-top:5px">مبلغی که ربات از مشتری می‌گیرد. این محصول را خودتان به مشتری تحویل می‌دهید.</small></label>
           <label class="field"><span>واحد (مثال: GB یا Toman)</span><input class="input" name="topup_unit" placeholder="اختیاری"></label>
           <label class="field"><span>رنگ دکمه</span><?= nexora_agentshop_style_select('') ?></label>
           <label class="field"><span>ایموجی پرمیوم</span><input class="input" name="btn_emoji_id" placeholder="آیدی عددی یا {emoji:نام}"></label>
@@ -204,8 +244,8 @@ foreach (nexora_color_palette() as $slug => $info) {
         <input type="hidden" name="edit_id" id="tu_edit_id">
         <div class="form-grid">
           <label class="field"><span>نام گزینه</span><input class="input" name="topup_name" id="tu_edit_name" required></label>
-          <label class="field"><span>مبلغ پرداختی (تومان)</span><input class="input" type="number" name="topup_price" id="tu_edit_price" value="0" required></label>
-          <label class="field"><span>اعتبار داخل پنل (تومان)</span><input class="input" type="number" name="topup_credit" id="tu_edit_credit" value="0" required></label>
+          <label class="field"><span>مبلغ پرداختی (تومان)</span><input class="input" type="number" name="topup_price" id="tu_edit_price" value="0" required>
+            <small style="display:block;color:var(--mute);font-size:.72rem;margin-top:5px">مبلغی که ربات از مشتری می‌گیرد. این محصول را خودتان به مشتری تحویل می‌دهید.</small></label>
           <label class="field"><span>واحد</span><input class="input" name="topup_unit" id="tu_edit_unit" placeholder="اختیاری"></label>
           <label class="field"><span>رنگ دکمه</span><?= nexora_agentshop_style_select('', 'btn_style', 'tu_edit_style') ?></label>
           <label class="field"><span>ایموجی پرمیوم</span><input class="input" name="btn_emoji_id" id="tu_edit_emoji" placeholder="آیدی عددی یا {emoji:نام}"></label>
@@ -232,7 +272,6 @@ window.openEditTopup = function (p) {
     document.getElementById('tu_edit_id').value = p.id || '';
     document.getElementById('tu_edit_name').value = p.topup_name || '';
     document.getElementById('tu_edit_price').value = p.topup_price || 0;
-    document.getElementById('tu_edit_credit').value = p.topup_credit || 0;
     document.getElementById('tu_edit_unit').value = p.topup_unit || '';
     document.getElementById('tu_edit_description').value = p.topup_description || '';
     document.getElementById('tu_edit_emoji').value = p.btn_emoji_id || '';

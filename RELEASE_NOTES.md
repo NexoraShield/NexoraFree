@@ -1,5 +1,15 @@
 # Nexora Bot — Release Notes
 
+## v1.22.96 (2026-11-15) — The two keys in the shops of the panels, and the credit of the panel is not written any more
+
+- The two small keys that move a row up and down are in every list of the panels now: the products of the reseller panel, the products of the agent panel, and the options of the top up of the panel.
+- The field «اعتبار داخل پنل (تومان)» is gone from the form of the top up as well: the credit of a panel that is delivered by hand is a volume (a terabyte for example) and it is defined in the panel itself. The row keeps the credit it has, and the price is only what the bot takes from the customer.
+- A top up without a credit is told to the customer as a charge that the support does by hand (the same message as the shop of the reseller panel).
+- The named account of a test service is never lost: an empty box keeps the account the row already has (before, the box was only read when the panel was empty too).
+
+---
+
+
 ## v1.22.95 (2026-11-15) — The two small keys are more beautiful
 
 - The two keys that move a product up and down are in one little glass button now: a soft shine on the top, a hairline between the two keys, and the light of the accent color (and a small glow) when the mouse is on a key.

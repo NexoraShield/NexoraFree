@@ -1797,9 +1797,10 @@ function DirectPayment($order_id, $image = 'images.jpg')
                     '{balance}' => number_format($topupBalance),
                     '{panel}' => $topupPanel,
                 ]);
-                if ($topupShop === 'agentshop') {
+                if ($topupShop === 'agentshop' || $topupCredit <= 0) {
                     // The charge of the agent shop is done by the support, so
-                    // the customer is told what happens next.
+                    // the customer is told what happens next. The same goes
+                    // for a package without a credit: it is delivered by hand.
                     $topupText = ($textbotlang['users']['topUp']['successManual'] ?? "✅ عملیات با موفقیت انجام شد و مشخصات برای پشتیبانی ارسال شد.\n\nنهایتا تا ۲۴ ساعت اعمال می‌شود. برای تسریع در روند می‌توانید به پشتیبانی ربات پیام بدهید.");
                 }
                 sendmessage($Balance_id['id'], $topupText, null, 'HTML');
@@ -1821,7 +1822,9 @@ function DirectPayment($order_id, $image = 'images.jpg')
                     $topupAdminText .= "👤 نام کاربری پنل: " . $Balance_id['id'] . "\n"
                         . "🔗 لینک پنل: " . nexora_agent_panel_link() . "\n"
                         . "💰 موجودی قبل از شارژ: " . number_format($topupBalanceBefore) . " تومان\n"
-                        . "✅ اعتبار به کیف پول کاربر اضافه شد. موجودی فعلی: " . number_format($topupBalance) . " تومان.";
+                        . ($topupCredit > 0
+                            ? "✅ اعتبار به کیف پول کاربر اضافه شد. موجودی فعلی: " . number_format($topupBalance) . " تومان."
+                            : "ℹ️ به کیف پول اضافه نشد. محصول باید دستی به مشتری تحویل شود.");
                 } else {
                     $topupAdminText .= "ℹ️ این مبلغ به کیف پول کاربر اضافه نشده است.\n"
                         . "⚠️ این شارژ باید دستی انجام شود.";

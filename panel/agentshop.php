@@ -72,6 +72,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
                 flash('error', 'خطای دیتابیس: ' . $e->getMessage());
             }
         }
+    } elseif ($action === 'move') {
+        $orderId = (int) ($_POST['id'] ?? 0);
+        $orderDir = (string) ($_POST['dir'] ?? '');
+        if ($orderId > 0 && ($orderDir === 'up' || $orderDir === 'down')) {
+            $orderRows = array_map('intval', array_column(db_fetchAll($pdo, "SELECT id FROM product WHERE agent = ? ORDER BY display_order, id", [NEXORA_AGENT_SHOP_MARKER]), 'id'));
+            $orderIndex = array_search($orderId, $orderRows, true);
+            if ($orderIndex !== false) {
+                $orderTarget = ($orderDir === 'up') ? $orderIndex - 1 : $orderIndex + 1;
+                if ($orderTarget >= 0 && $orderTarget < count($orderRows)) {
+                    move_display_order($pdo, 'product', $orderId, $orderTarget + 1, $orderRows);
+                    flash('success', 'ترتیب نمایش محصول تغییر کرد.');
+                }
+            }
+        }
     } elseif ($action === 'delete') {
         db_query($pdo, "DELETE FROM product WHERE id = ? AND agent = ?", [(int) ($_POST['edit_id'] ?? 0), NEXORA_AGENT_SHOP_MARKER]);
         flash('success', 'محصول حذف شد.');
@@ -172,7 +186,10 @@ else: ?>
       <?php if (!$items): ?>
         <tr><td colspan="11" style="text-align:center;color:var(--mute);padding:22px">هنوز محصولی برای فروش پنل نمایندگی تعریف نشده است.</td></tr>
       <?php endif; ?>
-      <?php foreach ($items as $it): ?>
+      <?php $ordIndex = 0;
+      foreach ($items as $it):
+        $ordIndex++;
+      ?>
         <tr>
           <td><?= nexora_agentshop_preview($it['name_product'] ?? '', (string) ($it['btn_style'] ?? ''), (string) ($it['btn_emoji_id'] ?? ''), $STYLE_COLORS) ?></td>
           <td><?= function_exists('nexora_emoji_text_to_html') ? nexora_emoji_text_to_html((string) ($it['name_product'] ?? '')) : htmlspecialchars((string) ($it['name_product'] ?? '')) ?></td>
@@ -183,7 +200,17 @@ else: ?>
           <td><span class="pill"><?= htmlspecialchars((string) ($it['btn_style'] ?? 'پیش‌فرض')) ?></span></td>
           <td><?= nexora_emoji_preview_html((string) ($it['btn_emoji_id'] ?? '')) ?: '<span class="cf">—</span>' ?></td>
           <td><?= ($it['status_product'] ?? 'active') === 'active' ? '✅ فعال' : '⛔️ پنهان' ?></td>
-          <td><?= (int) ($it['display_order'] ?? 0) ?></td>
+          <td>
+            <form method="POST" class="ord-form">
+              <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+              <input type="hidden" name="action" value="move">
+              <input type="hidden" name="id" value="<?= (int) $it['id'] ?>">
+              <button class="ord-btn" type="submit" name="dir" value="up" title="یک پله بالاتر"
+                <?= $ordIndex <= 1 ? 'disabled' : '' ?>><?= nexora_order_icon('up') ?></button>
+              <button class="ord-btn" type="submit" name="dir" value="down" title="یک پله پایین‌تر"
+                <?= $ordIndex >= count($items) ? 'disabled' : '' ?>><?= nexora_order_icon('down') ?></button>
+            </form>
+          </td>
           <td style="white-space:nowrap">
             <button class="btn btn-primary btn-sm" type="button" onclick='openEditModal(<?= json_encode([
                 'id' => (int) $it['id'],
@@ -196,7 +223,7 @@ else: ?>
                 'btn_style' => (string) ($it['btn_style'] ?? ''),
                 'btn_emoji_id' => (string) ($it['btn_emoji_id'] ?? ''),
                 'status_product' => (string) ($it['status_product'] ?? 'active'),
-                'position' => (int) ($it['display_order'] ?? 0),
+                'position' => $ordIndex,
             ], JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>✏️ ویرایش</button>
             <a class="btn btn-no btn-sm" href="agentshop.php?delete=<?= (int) $it['id'] ?>&_csrf=<?= csrf_token() ?>" data-confirm="این محصول حذف شود؟">حذف</a>
           </td>
