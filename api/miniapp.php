@@ -1094,8 +1094,12 @@ function mini_test_purchase(array $data, string $method, array $user_info): void
         'active',
         json_encode(['volume' => false, 'time' => false]),
     ]);
-    // The share of the customer is taken away with the test service.
-    update("user", "limit_usertest", max(0, $limit - 1), "id", $user_info['id']);
+    // The share of the customer is taken away with the test service. The
+    // administrator of the bot is not counted: he may test as much as he
+    // wants.
+    if (!in_array((string) $user_info['id'], $adminIds, true)) {
+        update("user", "limit_usertest", max(0, $limit - 1), "id", $user_info['id']);
+    }
 
     echo json_encode([
         'success' => true,

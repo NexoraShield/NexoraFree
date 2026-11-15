@@ -1,5 +1,13 @@
 # Nexora Bot — Release Notes
 
+## v1.23.00 (2026-11-15) — The test service comes with its link, and the administrator of the bot is not counted
+
+- The message of the test service had no link in it (the part «لینک اتصال:» was empty) and the volume was wrong («0.0977 مگابایت» instead of «100 مگابایت»). The link of the subscription of the panel (and the links of the configuration) is in the message now, exactly like a bought service, and the volume is counted in megabytes.
+- The share of the test services is for the customers: the administrator of the bot may take as many test services as he wants, and his share is not spent (in the bot and in the web application).
+
+---
+
+
 ## v1.22.99 (2026-11-15) — The test service can be taken in the bot again
 
 - The button «دریافت سرویس تست» fell into the branch of the button of the test service itself (the two names began with the same words), so the bot looked for a test service with the name «get_…» and answered «در حال حالر سرویس تستی تعریف نشده است».

@@ -3346,8 +3346,14 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             return;
         }
     }
-    $limit_usertest = $userlimit['limit_usertest'] - 1;
-    update("user", "limit_usertest", $limit_usertest, "id", $from_id);
+    // The administrator of the bot is not counted: the share of the test
+    // services is for the customers, the administrator may take as many
+    // test services as he wants.
+    $limit_usertest = (int) ($userlimit['limit_usertest'] ?? 0);
+    if (!in_array($from_id, $admin_ids)) {
+        $limit_usertest = max(0, $limit_usertest - 1);
+        update("user", "limit_usertest", $limit_usertest, "id", $from_id);
+    }
     $randomString = bin2hex(random_bytes(4));
     $text = strtolower($text);
     $marzban_list_get = select("marzban_panel", "*", "code_panel", $name_panel, "select");
@@ -6964,7 +6970,11 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         'username' => $username,
         'type' => 'usertest'
     ];
-    update("user", "limit_usertest", intval($testUserLimit['limit_usertest']) - 1, "id", $from_id);
+    // The administrator of the bot is not counted: he may take as many test
+    // services as he wants.
+    if (!in_array($from_id, $admin_ids)) {
+        update("user", "limit_usertest", max(0, intval($testUserLimit['limit_usertest'] ?? 0) - 1), "id", $from_id);
+    }
     // The account of the test: the panel refuses a name that it knows already,
     // so a new name is tried when the first one does not work. The customer
     // always gets his test service and a broken account never stops the bot.
@@ -7019,11 +7029,17 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         'active',
         $testNotif,
     ]);
+    // The links of the account: the link of the subscription (when the
+    // panel has one) and the links of the configuration. The customer gets
+    // them with the message, exactly like a bought service.
+    $testConfigs = is_array($testOutput['configs'] ?? null) ? $testOutput['configs'] : [];
     $testConfigLink = '';
-    $testConfigs = '';
-    if ($testPanel['config'] == "onconfig" && is_array($testOutput['configs'])) {
-        foreach ($testOutput['configs'] as $testConfigItem) {
-            $testConfigLink .= (string) $testConfigItem;
+    if ($testPanel['sublink'] == "onsublink") {
+        $testConfigLink = (string) ($testOutput['subscription_url'] ?? '');
+    }
+    if ($testPanel['config'] == "onconfig") {
+        foreach ($testConfigs as $testConfigItem) {
+            $testConfigLink .= ($testConfigLink !== '' ? "\n" : '') . (string) $testConfigItem;
         }
     }
     $testText = strtr($textbotlang['textbot']['afterText'], [
@@ -7031,11 +7047,27 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         '{name_service}' => (string) $testProduct['name_product'],
         '{location}' => (string) $testPanel['name_panel'],
         '{day}' => (string) $testHours,
-        '{volume}' => (string) $testVolumeGb,
+        // The text of the message counts the volume in megabytes.
+        '{volume}' => (string) (int) round($testVolumeGb * 1024),
         '{config}' => '<code>' . $testConfigLink . '</code>',
-        '{links}' => $testConfigs,
+        '{links}' => implode("\n", array_map('strval', $testConfigs)),
     ]);
-    sendmessage($from_id, $testText, null, 'HTML');
+    // The button that brings the guide of the connection.
+    $testKeyboard = json_encode([
+        'inline_keyboard' => [
+            [['text' => $textbotlang['users']['help']['btninlinebuy'], 'callback_data' => "helpbtn"]],
+        ]
+    ]);
+    sendMessageService(
+        $testPanel,
+        $testConfigs,
+        $testConfigLink,
+        (string) $testOutput['username'],
+        $testKeyboard,
+        $testText,
+        $testInvoice,
+        wireguard: is_array($testOutput['wireguard'] ?? null) ? $testOutput['wireguard'] : []
+    );
     step('home', $from_id);
     update("user", "Processing_value_one", '', "id", $from_id);
 } elseif ($datain == "topup_agentshop" || $datain == "topup_agentpanelshop") {
