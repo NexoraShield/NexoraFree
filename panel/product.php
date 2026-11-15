@@ -71,6 +71,24 @@ if (($_SERVER['REQUEST_METHOD'] === 'POST') && ($_POST['action'] ?? '') === 'pos
   header('Location: product.php');
   exit;
 }
+if (($_SERVER['REQUEST_METHOD'] === 'POST') && ($_POST['action'] ?? '') === 'move') {
+  csrf_check_post();
+  $orderId = (int) ($_POST['id'] ?? 0);
+  $orderDir = (string) ($_POST['dir'] ?? '');
+  if ($orderId > 0 && ($orderDir === 'up' || $orderDir === 'down')) {
+    $orderRows = array_map('intval', array_column(db_fetchAll($pdo, "SELECT id FROM product WHERE 1=1" . panel_product_test_filter($pdo) . " ORDER BY display_order, id"), 'id'));
+    $orderIndex = array_search($orderId, $orderRows, true);
+    if ($orderIndex !== false) {
+      $orderTarget = ($orderDir === 'up') ? $orderIndex - 1 : $orderIndex + 1;
+      if ($orderTarget >= 0 && $orderTarget < count($orderRows)) {
+        move_display_order($pdo, 'product', $orderId, $orderTarget + 1, $orderRows);
+        flash('success', 'ترتیب نمایش محصول تغییر کرد.');
+      }
+    }
+  }
+  header('Location: product.php');
+  exit;
+}
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit') {
   csrf_check_post();
   $pid = (int) ($_POST['edit_id'] ?? 0);
@@ -187,8 +205,8 @@ include __DIR__ . '/inc/layout_head.php';
             <th>دسته‌بندی</th>
             <th>ایموجی</th>
             <th>کد</th>
+            <th>ترتیب</th>
             <th>عملیات</th>
-                            <th>ترتیب نمایش</th>
                 </tr>
         </thead>
         <tbody>
@@ -208,13 +226,14 @@ include __DIR__ . '/inc/layout_head.php';
               <td><?= function_exists('nexora_emoji_preview_html') ? (nexora_emoji_preview_html((string) ($p['btn_emoji_id'] ?? '')) ?: '<span class="cf">—</span>') : '<span class="cf">—</span>' ?></td>
               <td class="cm" style="font-size:.72rem"><?= htmlspecialchars($p['code_product'] ?? '') ?></td>
               <td>
-                <form method="POST" style="display:flex;gap:5px;align-items:center">
+                <form method="POST" class="ord-form">
                   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
-                  <input type="hidden" name="action" value="position">
+                  <input type="hidden" name="action" value="move">
                   <input type="hidden" name="id" value="<?= (int) $p['id'] ?>">
-                  <input type="number" name="position" class="input" style="width:64px;padding:4px 6px"
-                    min="1" max="<?= count($products) ?>" value="<?= $i ?>">
-                  <button class="btn btn-ghost btn-sm" type="submit">ذخیره</button>
+                  <button class="ord-btn" type="submit" name="dir" value="up" title="یک پله بالاتر"
+                    <?= $i <= 1 ? 'disabled' : '' ?>><?= nexora_order_icon('up') ?></button>
+                  <button class="ord-btn" type="submit" name="dir" value="down" title="یک پله پایین‌تر"
+                    <?= $i >= count($products) ? 'disabled' : '' ?>><?= nexora_order_icon('down') ?></button>
                 </form>
               </td>
               <td>

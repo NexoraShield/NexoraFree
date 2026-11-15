@@ -176,7 +176,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
                         ]
                     );
                     if (isset($_POST['position'])) {
-                        move_display_order($pdo, 'product', $id, (int) $_POST['position']);
                         $orderRows = array_map('intval', array_column(db_fetchAll($pdo, "SELECT id FROM product WHERE is_test = 1 ORDER BY display_order, id"), 'id'));
                         move_display_order($pdo, 'product', $id, (int) $_POST['position'], $orderRows);
                     }
@@ -199,6 +198,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
             $orderRows = array_map('intval', array_column(db_fetchAll($pdo, "SELECT id FROM product WHERE is_test = 1 ORDER BY display_order, id"), 'id'));
             move_display_order($pdo, 'product', $orderId, $orderPosition, $orderRows);
             flash('success', 'ترتیب نمایش سرویس تست تغییر کرد.');
+        }
+        header('Location: testservice.php');
+        exit;
+    } elseif ($action === 'move') {
+        csrf_check_post();
+        $orderId = (int) ($_POST['id'] ?? 0);
+        $orderDir = (string) ($_POST['dir'] ?? '');
+        if ($orderId > 0 && ($orderDir === 'up' || $orderDir === 'down')) {
+            $orderRows = array_map('intval', array_column(db_fetchAll($pdo, "SELECT id FROM product WHERE is_test = 1 ORDER BY display_order, id"), 'id'));
+            $orderIndex = array_search($orderId, $orderRows, true);
+            if ($orderIndex !== false) {
+                $orderTarget = ($orderDir === 'up') ? $orderIndex - 1 : $orderIndex + 1;
+                if ($orderTarget >= 0 && $orderTarget < count($orderRows)) {
+                    move_display_order($pdo, 'product', $orderId, $orderTarget + 1, $orderRows);
+                    flash('success', 'ترتیب نمایش سرویس تست تغییر کرد.');
+                }
+            }
         }
         header('Location: testservice.php');
         exit;
@@ -310,9 +326,11 @@ $testUsersTotal = (int) db_count($pdo, "SELECT COUNT(*) FROM user");
       <?php if (!$items): ?>
         <tr><td colspan="12" style="text-align:center;color:var(--mute);padding:22px">هنوز سرویس تستی تعریف نشده است. تا وقتی سرویس تست تعریف نکنید، سرویس تست قبلی (بر اساس تنظیمات هر پنل) مثل قبل کار می‌کند.</td></tr>
       <?php endif; ?>
-      <?php foreach ($items as $it):
+      <?php $ordIndex = 0;
+      foreach ($items as $it):
         $inbounds = nexora_testservice_inbound_values((string) ($it['inbounds'] ?? ''));
         $inboundText = $inbounds ? implode('، ', $inbounds) : 'پیش‌فرض پنل';
+        $ordIndex++;
       ?>
         <tr>
           <td><?= nexora_testservice_preview($it['name_product'] ?? '', (string) ($it['btn_style'] ?? ''), (string) ($it['btn_emoji_id'] ?? ''), $colors) ?></td>
@@ -325,15 +343,15 @@ $testUsersTotal = (int) db_count($pdo, "SELECT COUNT(*) FROM user");
           <td><span class="pill"><?= htmlspecialchars((string) ($it['btn_style'] ?? 'پیش‌فرض')) ?></span></td>
           <td><?= nexora_emoji_preview_html((string) ($it['btn_emoji_id'] ?? '')) ?: '<span class="cf">—</span>' ?></td>
           <td><?= ($it['status_product'] ?? 'active') === 'active' ? '✅ فعال' : '⛔️ پنهان' ?></td>
-          <td><?= (int) ($it['display_order'] ?? 0) ?></td>
           <td>
-            <form method="POST" style="display:flex;gap:5px;align-items:center">
+            <form method="POST" class="ord-form">
               <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
-              <input type="hidden" name="action" value="position">
+              <input type="hidden" name="action" value="move">
               <input type="hidden" name="id" value="<?= (int) $it['id'] ?>">
-              <input type="number" name="position" class="input" style="width:64px;padding:4px 6px"
-                min="1" max="<?= count($items) ?>" value="<?= (int) ($it['display_order'] ?? 0) ?>">
-              <button class="btn btn-ghost btn-sm" type="submit">ذخیره</button>
+              <button class="ord-btn" type="submit" name="dir" value="up" title="یک پله بالاتر"
+                <?= $ordIndex <= 1 ? 'disabled' : '' ?>><?= nexora_order_icon('up') ?></button>
+              <button class="ord-btn" type="submit" name="dir" value="down" title="یک پله پایین‌تر"
+                <?= $ordIndex >= count($items) ? 'disabled' : '' ?>><?= nexora_order_icon('down') ?></button>
             </form>
           </td>
           <td style="white-space:nowrap">
@@ -348,7 +366,7 @@ $testUsersTotal = (int) db_count($pdo, "SELECT COUNT(*) FROM user");
                 'btn_style' => (string) ($it['btn_style'] ?? ''),
                 'btn_emoji_id' => (string) ($it['btn_emoji_id'] ?? ''),
                 'status_product' => (string) ($it['status_product'] ?? 'active'),
-                'position' => (int) ($it['display_order'] ?? 0),
+                'position' => $ordIndex,
                 'inbounds' => $inbounds,
                 'protocol_account' => (string) ($it['protocol_account'] ?? ''),
             ], JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>✏️ ویرایش</button>

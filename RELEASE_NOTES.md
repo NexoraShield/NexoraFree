@@ -1,5 +1,16 @@
 # Nexora Bot — Release Notes
 
+## v1.22.94 (2026-11-15) — Two small keys that move a product up and down
+
+- Every row of the list of the products has two small keys now: the one that points up moves the product one step up and the one that points down moves it one step down. The key of the first product that points up and the key of the last product that points down are grey (they are off).
+- The list of the test services has the same two keys.
+- The order of the list is the order the bot shows the products in (the bot reads the same number of the order).
+- The box with the number of the order is gone from the list (the number can still be written in the window of the edit of the product).
+- The head of the table of the products is fixed: the column of the order was above the column of the operations.
+
+---
+
+
 ## v1.22.93 (2026-11-15) — The credit of the panel is not written in the form of the agent panel any more
 
 - The field «اعتبار داخل پنل (تومان)» is gone from the products of the agent panel of the web panel. A panel of this kind is a product that is given to the customer by hand and its credit is a volume that is defined somewhere else, so it is not a number of this form.

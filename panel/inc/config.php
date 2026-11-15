@@ -65,6 +65,17 @@ function move_display_order(PDO $pdo, string $table, int $id, int $position, ?ar
         }
     }
 }
+/**
+ * The little arrow of the two keys that move a row of a list up and down.
+ */
+function nexora_order_icon(string $dir): string
+{
+    $points = ($dir === 'up') ? '18 15 12 9 6 15' : '6 9 12 15 18 9';
+    return '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" ' .
+        'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' .
+        '<polyline points="' . $points . '"/></svg>';
+}
+
 function require_auth(): void
 {
     if (session_status() === PHP_SESSION_NONE)

@@ -3,3 +3,13 @@
 .range-tabs{display:flex;gap:4px;margin-bottom:14px;background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:5px;overflow-x:auto;width:fit-content;max-width:100%}.range-tabs a{padding:7px 14px;border-radius:7px;font-size:.8rem;font-weight:600;white-space:nowrap;color:var(--mute);text-decoration:none;transition:all .15s}.range-tabs a:hover{color:var(--text)}.range-tabs a.active{background:var(--ac);color:var(--btn-ac-text,#fff);box-shadow:0 0 14px var(--acg)}
 .chart-grid{transition:opacity .15s}.chart-grid.loading{opacity:.5;pointer-events:none}
 .btn-glass{position:relative;display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:12px;font-size:.8rem;font-weight:700;color:var(--text);text-decoration:none;background:linear-gradient(135deg,color-mix(in srgb,var(--ac) 30%,transparent),color-mix(in srgb,var(--ac) 8%,transparent));border:1px solid color-mix(in srgb,var(--ac) 45%,transparent);box-shadow:0 6px 20px var(--acg),inset 0 1px 0 rgba(255,255,255,.28);backdrop-filter:blur(12px) saturate(160%);-webkit-backdrop-filter:blur(12px) saturate(160%);overflow:hidden;transition:transform .15s,box-shadow .15s}.btn-glass::before{content:"";position:absolute;inset:0 0 50% 0;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,0));pointer-events:none}.btn-glass svg{color:var(--no)}.btn-glass:hover{transform:translateY(-1px);box-shadow:0 8px 26px var(--acg),inset 0 1px 0 rgba(255,255,255,.35)}
+
+/* The two small keys that move a row of a list up and down */
+.ord-form{display:inline-flex;gap:4px;align-items:center}
+.ord-btn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;
+  border:1px solid var(--bd);border-radius:7px;background:var(--sf2);color:var(--mute);cursor:pointer;
+  transition:all var(--tf)}
+.ord-btn svg{width:13px;height:13px}
+.ord-btn:hover{background:var(--sf3);color:var(--text);border-color:var(--bds)}
+.ord-btn:disabled{opacity:.22;cursor:default}
+.ord-btn:disabled:hover{background:var(--sf2);color:var(--mute);border-color:var(--bd)}
