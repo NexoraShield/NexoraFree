@@ -354,6 +354,7 @@ function telegram($method, $datas = [], $token = null, $allowEmojiFallback = tru
             $emojiRejected = stripos($description, 'emoji') !== false
                 || stripos($description, 'entit') !== false;
             if ($emojiRejected && (!isset($retry['ok']) || $retry['ok'])) {
+                error_log('customEmojiBlocked: the api refused the premium emoji, it is out for 30 minutes: ' . $description);
                 customEmojiBlocked($token, true);
             }
             return $retry;

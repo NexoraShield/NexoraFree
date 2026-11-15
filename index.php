@@ -7068,6 +7068,39 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         $testInvoice,
         wireguard: is_array($testOutput['wireguard'] ?? null) ? $testOutput['wireguard'] : []
     );
+    // The report of the test service in the group of the reports: the
+    // administrator sees every test account that is made.
+    $Response = json_encode([
+        'inline_keyboard' => [
+            [
+                ['text' => $textbotlang['Admin']['manageUser']['manageUserBtn'], 'callback_data' => 'manageuser_' . $from_id],
+            ],
+        ]
+    ]);
+    $timejalali = jdate('Y/m/d H:i:s');
+    $text_report = sprintf(
+        $textbotlang['Admin']['reportgroup']['testAccountCreated'],
+        $from_id,
+        $username,
+        $testUsername,
+        $first_name,
+        (string) $testPanel['name_panel'],
+        $testHours,
+        (int) round($testVolumeGb * 1024),
+        $testInvoice,
+        (string) ($user['agent'] ?? ''),
+        (string) ($user['number'] ?? ''),
+        $timejalali
+    );
+    if (strlen((string) ($setting['Channel_Report'] ?? '')) > 0) {
+        telegram('sendmessage', [
+            'chat_id' => $setting['Channel_Report'],
+            'message_thread_id' => $reporttest,
+            'text' => $text_report,
+            'parse_mode' => 'HTML',
+            'reply_markup' => $Response,
+        ]);
+    }
     step('home', $from_id);
     update("user", "Processing_value_one", '', "id", $from_id);
 } elseif ($datain == "topup_agentshop" || $datain == "topup_agentpanelshop") {

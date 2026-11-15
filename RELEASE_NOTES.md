@@ -1,5 +1,13 @@
 # Nexora Bot — Release Notes
 
+## v1.23.03 (2026-11-15) — The report of the test service goes to the group again
+
+- The test service of the web panel sent the report of the error to the group, but not the report of the success: the administrator never saw the test accounts that were made. The report of the success is in the group again (in the topic of the test accounts), with the same text as the test account of the panel.
+- The reason why the api of Telegram refused the premium emoji is written in the log of the bot now, so it can be read (the emoji is out for 30 minutes after such a refusal).
+
+---
+
+
 ## v1.23.02 (2026-11-15) — The credit of the options of the top up is written from the list
 
 - The column of the credit is back in the list of the options of the top up (the number is shown to the customer when he buys the option), in both shops.
