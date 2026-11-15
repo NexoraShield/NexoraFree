@@ -1,5 +1,13 @@
 # Nexora Bot — Release Notes
 
+## v1.22.99 (2026-11-15) — The test service can be taken in the bot again
+
+- The button «دریافت سرویس تست» fell into the branch of the button of the test service itself (the two names began with the same words), so the bot looked for a test service with the name «get_…» and answered «در حال حالر سرویس تستی تعریف نشده است».
+- The test service is made now: the account is created on the panel of the test service with the specs of the test service (the volume, the duration and the panel of the test).
+
+---
+
+
 ## v1.22.98 (2026-11-15) — The tabs of the pages answer the browser before the page is printed
 
 - The tabs of the pages (the top up, the panels of the agent panel and the panels that were delivered) sent their redirect after the page had begun to print. The browser could not follow it, so it kept the half finished page and asked to send the form again the next time (the change was saved, but the page came back empty and the browser wanted a resend).

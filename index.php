@@ -6915,7 +6915,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     update("user", "Processing_value_one", $agentPanelRandom, "id", $from_id);
     sendmessage($from_id, $textbotlang['users']['sell']['noCredit'], $step_payment, 'HTML');
     step('get_step_payment_buy', $from_id);
-} elseif (preg_match('/^testproduct_([A-Za-z0-9_\-]+)$/', $datain, $dataget)) {
+} elseif (preg_match('/^testproduct_((?!get_)[A-Za-z0-9_\-]+)$/', $datain, $dataget)) {
     $testProduct = select("product", "*", "code_product", (string) $dataget[1], "select");
     if (!$testProduct || (int) $testProduct['is_test'] !== 1 || $testProduct['status_product'] !== 'active') {
         sendmessage($from_id, $textbotlang['users']['testService']['empty'], $backuser, 'HTML');
