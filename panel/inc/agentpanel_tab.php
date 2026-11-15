@@ -96,17 +96,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
     $action = (string) $_POST['action'];
     if ($action === 'ap_add' || $action === 'ap_edit') {
         $name = trim($_POST['name_panel'] ?? '');
+        // The credit is not written by this form: the product keeps the credit it has.
+        $credit = 0;
+        // The price is what the bot takes from the customer: the owner gives
+        // the product to the customer by hand.
         $price = (int) ($_POST['price'] ?? 0);
-        $credit = (int) ($_POST['credit'] ?? 0);
-        // The price of a package is the credit it puts into the wallet of the
-        // customer. When no price is typed, or when the administrator asks for
-        // it, the credit is used.
-        if ($price <= 0 && $credit > 0) {
-            $price = $credit;
-        }
-        if ((string) ($_POST['price_same_credit'] ?? '0') === '1') {
-            $price = $credit;
-        }
         if ($name === '') {
             flash('error', 'نام پنل را وارد کنید.');
         } elseif (!$agentPanelProductReady) {
@@ -132,6 +126,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
                     flash('success', 'پنل نمایندگی اضافه شد.');
                 } else {
                     $id = (int) ($_POST['edit_id'] ?? 0);
+                    // The credit is not written by this form: the product keeps
+                    // the credit it has (the credit of a package that is
+                    // delivered by hand is a volume, and it is defined
+                    // somewhere else).
+                    $creditRow = db_fetch($pdo, "SELECT credit FROM agent_panel_product WHERE id = ?", [$id]);
+                    $credit = (int) ($creditRow['credit'] ?? 0);
                     db_query(
                         $pdo,
                         "UPDATE agent_panel_product SET name=?,price=?,credit=?,description=?,status_product=?,btn_style=?,btn_emoji_id=?,panel_name=? WHERE id=?",
@@ -277,8 +277,7 @@ foreach (nexora_color_palette() as $slug => $info) {
             </select>
             <small style="display:block;color:var(--mute);font-size:.72rem;margin-top:5px">پنل‌هایی که در ربات با کلید «افزودن پنل» و نوع «اجنت پنل» ساخته‌اید اینجا نمایش داده می‌شوند.</small>
           </label>
-          <label class="field"><span>قیمت (تومان)</span><input class="input" type="number" name="price" value="0" required><small style="display:block;color:var(--mute);font-size:.72rem;margin-top:5px">اگر خالی بماند، قیمت برابر با اعتبار پنل ذخیره می‌شود.</small></label>
-          <label class="field"><span>اعتبار داخل پنل (تومان)</span><input class="input" type="number" name="credit" value="1000000" required></label>
+          <label class="field"><span>قیمت (تومان)</span><input class="input" type="number" name="price" value="0" required><small style="display:block;color:var(--mute);font-size:.72rem;margin-top:5px">مبلغی که ربات از مشتری می‌گیرد. این محصول را خودتان به مشتری تحویل می‌دهید.</small></label>
           <label class="field"><span>رنگ دکمه</span><?= nexora_agentpanel_style_select('') ?></label>
           <label class="field"><span>ایموجی پرمیوم</span><input class="input ms-emoji-field" data-ms-max="1" name="btn_emoji_id" placeholder="آیدی عددی یا {emoji:نام}"></label>
           <label class="field" style="grid-column:1/-1"><span>توضیحات (برای مشتری)</span><textarea class="input" name="description" rows="3" placeholder="مزیت‌های این پنل، تعداد کاربر، مدت اعتبار و ..."></textarea></label>
@@ -314,7 +313,6 @@ foreach (nexora_color_palette() as $slug => $info) {
             </select>
           </label>
           <label class="field"><span>قیمت (تومان)</span><input class="input" type="number" name="price" id="ap_edit_price" value="0" required></label>
-          <label class="field"><span>اعتبار داخل پنل (تومان)</span><input class="input" type="number" name="credit" id="ap_edit_credit" value="0" required></label>
           <label class="field"><span>رنگ دکمه</span><?= nexora_agentpanel_style_select('', 'btn_style', 'ap_edit_style') ?></label>
           <label class="field"><span>ایموجی پرمیوم</span><input class="input ms-emoji-field" data-ms-max="1" name="btn_emoji_id" id="ap_edit_emoji" placeholder="آیدی عددی یا {emoji:نام}"></label>
           <label class="field"><span>وضعیت</span>
@@ -345,7 +343,6 @@ window.openEditAgentPanel = function (p) {
         apPanel.value = p.panel_name || '';
     }
     document.getElementById('ap_edit_price').value = p.price || 0;
-    document.getElementById('ap_edit_credit').value = p.credit || 0;
     document.getElementById('ap_edit_description').value = p.description || '';
     document.getElementById('ap_edit_emoji').value = p.btn_emoji_id || '';
     document.getElementById('ap_edit_position').value = p.position || 0;

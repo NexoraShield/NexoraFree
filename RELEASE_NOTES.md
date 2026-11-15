@@ -1,5 +1,13 @@
 # Nexora Bot — Release Notes
 
+## v1.22.93 (2026-11-15) — The credit of the panel is not written in the form of the agent panel any more
+
+- The field «اعتبار داخل پنل (تومان)» is gone from the products of the agent panel of the web panel. A panel of this kind is a product that is given to the customer by hand and its credit is a volume that is defined somewhere else, so it is not a number of this form.
+- The product keeps the credit it has when it is saved (a new product starts with no credit).
+- The price is only what the bot takes from the customer: it is not taken from the credit any more.
+
+---
+
 ## v1.22.92 (2026-11-15) — The order of the products and of the test services can be written in the list, and the named account stays in its box
 
 - The list of the products and the list of the test services have a column «ترتیب نمایش» now: the number is written in the list and saved from there. The number is the number of the list that is shown (the order of the products and the order of the test services are two different lists).
@@ -542,7 +550,6 @@
 
 ---
 
-
 **Fixed (Critical)**
 - `cronbot/backup.php`: Duplicate code block (lines 95-116) from a previous edit caused a **PHP parse error** → the entire backup script failed to run → no backup was ever created or sent. Removed the duplicate block.
 - This was the **root cause** of "backup gives error" — the script couldn't even parse, let alone execute.
@@ -556,7 +563,6 @@
 
 ---
 
-
 ## v1.22.45 (2026-11-01) — Backup send to group fix
 
 **Fixed**
@@ -566,7 +572,6 @@
 - `idadmin` / admin id now cast to string instead of int, preserving negative group ids.
 
 ---
-
 
 ## v1.22.43 (2026-11-01) — Backup Fix
 
@@ -579,7 +584,6 @@
 - Added error logging for backup failures.
 
 ---
-
 
 ## v1.22.42 (2026-11-01) — Agent Panel Login Redesign
 
@@ -614,7 +618,6 @@
 - For future updates use `nexora update`.
 
 ---
-
 
 ## v1.9.8 (2026-10-29) — Update Mechanism Hardening
 **New**
