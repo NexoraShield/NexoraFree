@@ -574,7 +574,9 @@ if [[ $_missing -eq 1 ]]; then echo "ERROR: required files missing." >&2; exit 1
 _lint_fail=0
 while IFS= read -r -d '' _f; do
   if ! "$PHP_BIN" -l "$_f" >/dev/null 2>&1; then echo "  LINT FAIL: $_f"; _lint_fail=1; fi
-done < <(find "$TARGET" -type f -name '*.php' -print0)
+# The files of the vendor come from composer and never change: they are not
+# linted, so the update is much faster and the hub is not busy for nothing.
+done < <(find "$TARGET" -type f -name '*.php' -not -path "$TARGET/vendor/*" -print0)
 if [[ $_lint_fail -eq 1 ]]; then echo "ERROR: PHP syntax errors found in installed files." >&2; exit 1; fi
 echo "    All required files present; all PHP files syntactically valid."
 
