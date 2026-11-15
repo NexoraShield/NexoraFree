@@ -6094,7 +6094,7 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
         }
         $datac = array(
             'expire' => $datetimestep,
-            'data_limit' => $info_product['Volume_constraint'] * pow(1024, 3),
+            'data_limit' => (int) round($info_product['Volume_constraint'] * pow(1024, 3)),
             'from_id' => $user['Processing_value'],
             'username' => "",
             'type' => 'buy'
@@ -6560,7 +6560,7 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
     }
     $datac = array(
         'expire' => $expire,
-        'data_limit' => $user['Processing_value_tow'] * pow(1024, 3),
+        'data_limit' => (int) round($user['Processing_value_tow'] * pow(1024, 3)),
         'from_id' => $from_id,
         'username' => "$username",
         'type' => "new by admin $from_id"

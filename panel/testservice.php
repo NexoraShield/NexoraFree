@@ -99,6 +99,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
         $name = trim($_POST['name_product'] ?? '');
         $panel = trim($_POST['namepanel'] ?? '');
         $reference = trim($_POST['protocol_account'] ?? '');
+        // The panel of the test service never goes away: an empty field means
+        // that the panel was not changed, not that the test has no panel. The
+        // same for the account the administrator named.
+        if ($panel === '' && !empty($_POST['edit_id'])) {
+            $current = db_fetch($pdo, "SELECT Location, protocol_account FROM product WHERE id = ?", [(int) $_POST['edit_id']]);
+            $panel = (string) ($current['Location'] ?? '');
+            if ($reference === '') {
+                $reference = (string) ($current['protocol_account'] ?? '');
+            }
+        }
         if ($name === '') {
             flash('error', 'نام سرویس تست را وارد کنید.');
         } elseif ($panel === '') {
@@ -112,11 +122,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
                         $inboundList[] = $inboundValue;
                     }
                 }
-                $inbounds = $inboundList ? json_encode(array_values(array_unique($inboundList))) : '';
+                $inbounds = '';
                 // The test service may name an account of the panel: the group
                 // of that account is the group the customer of the test is
                 // created in. The panel itself is not changed.
-                $protocol = nexora_product_protocol_for_product($pdo, $panel, $reference, $inbounds, '');
+                $protocol = nexora_product_protocol_for_product($pdo, $panel, $reference, '', '');
                 $inbounds = $protocol['inbounds'];
                 $volumeUnit = strtolower(trim((string) ($_POST['volume_unit'] ?? 'gb'))) === 'mb' ? 'mb' : 'gb';
                 $volume = nexora_volume_to_gb($_POST['volume_product'] ?? 0, $volumeUnit);
@@ -333,20 +343,6 @@ $testUsersTotal = (int) db_count($pdo, "SELECT COUNT(*) FROM user");
 
 <?php
 // the form of the inbounds (shared by the add and the edit modal)
-$tsInboundField = function (string $id, array $selected = []) use ($panelInbounds) {
-    $selected = array_map('strval', $selected);
-    $h = '<div id="' . htmlspecialchars($id) . '" class="ts-inbounds">';
-    $h .= '<label class="ts-inbound" data-panel=""><input type="checkbox" name="inbounds[]" value=""> پیش‌فرض پنل</label>';
-    foreach ($panelInbounds as $panelName => $list) {
-        foreach ($list as $inb) {
-            $chk = in_array((string) $inb, $selected, true) ? ' checked' : '';
-            $h .= '<label class="ts-inbound" data-panel="' . htmlspecialchars((string) $panelName) . '">'
-                . '<input type="checkbox" name="inbounds[]" value="' . htmlspecialchars((string) $inb) . '"' . $chk . '> '
-                . htmlspecialchars((string) $inb) . '</label>';
-        }
-    }
-    return $h . '</div>';
-};
 ?>
 
 <div class="modal-veil" id="addModal">
@@ -373,7 +369,7 @@ $tsInboundField = function (string $id, array $selected = []) use ($panelInbound
           </label>
           <label class="field"><span>مدت (ساعت)</span><input class="input" type="number" name="time_product" value="1" required></label>
           <label class="field"><span>پنل</span>
-            <select name="namepanel" id="ts_add_panel" class="select" required onchange="tsFilterInbounds(document.getElementById('ts_add_inbounds'))">
+            <select name="namepanel" id="ts_add_panel" class="select" required>
               <option value="">— انتخاب کنید —</option>
               <?php foreach ($panels as $pn): ?>
                 <option value="<?= htmlspecialchars((string) $pn['name_panel']) ?>"><?= htmlspecialchars(nexora_testservice_panel_label((string) $pn['name_panel'])) ?></option>
@@ -383,10 +379,6 @@ $tsInboundField = function (string $id, array $selected = []) use ($panelInbound
           <label class="field"><span>نام کاربری یک اکانت داخل همین پنل (برای تنظیم پروتکل و اینباند)</span>
             <input class="input" name="protocol_account" placeholder="مثلاً نام کاربری یکی از اکانت‌های موجود در پنل">
             <small style="display:block;color:var(--mute);font-size:.72rem;margin-top:5px">دقیقاً مثل «تنظیم پروتکل و اینباند» در ربات: با این اکانت، پروتکل و اینباند پنل تنظیم می‌شود.</small>
-          </label>
-          <label class="field"><span>اینباند اختصاصی (اختیاری)</span>
-            <?= $tsInboundField('ts_add_inbounds') ?>
-            <small style="display:block;color:var(--mute);font-size:.72rem;margin-top:5px">اگر خالی بماند، اینباند پیش‌فرض پنل استفاده می‌شود.</small>
           </label>
           <label class="field"><span>رنگ دکمه</span><?= nexora_testservice_style_select('') ?></label>
           <label class="field"><span>ایموجی پرمیوم</span><input class="input ms-emoji-field" data-ms-max="1" name="btn_emoji_id" placeholder="آیدی عددی یا {emoji:نام}"></label>
@@ -426,7 +418,7 @@ $tsInboundField = function (string $id, array $selected = []) use ($panelInbound
           </label>
           <label class="field"><span>مدت (ساعت)</span><input class="input" type="number" name="time_product" id="ts_edit_time" value="0" required></label>
           <label class="field"><span>پنل</span>
-            <select name="namepanel" id="ts_edit_panel" class="select" required onchange="tsFilterInbounds(document.getElementById('ts_edit_inbounds'))">
+            <select name="namepanel" id="ts_edit_panel" class="select" required>
               <?php foreach ($panels as $pn): ?>
                 <option value="<?= htmlspecialchars((string) $pn['name_panel']) ?>"><?= htmlspecialchars(nexora_testservice_panel_label((string) $pn['name_panel'])) ?></option>
               <?php endforeach; ?>
@@ -435,9 +427,6 @@ $tsInboundField = function (string $id, array $selected = []) use ($panelInbound
           <label class="field"><span>نام کاربری یک اکانت داخل همین پنل (برای تنظیم پروتکل و اینباند)</span>
             <input class="input" name="protocol_account" id="ts_edit_protocol" placeholder="اختیاری — مثلاً نام کاربری یکی از اکانت‌های موجود در پنل">
             <small style="display:block;color:var(--mute);font-size:.72rem;margin-top:5px">اگر پر شود، پروتکل و اینباند پنل با اطلاعات همین اکانت تنظیم می‌شود.</small>
-          </label>
-          <label class="field"><span>اینباند اختصاصی (اختیاری)</span>
-            <?= $tsInboundField('ts_edit_inbounds') ?>
           </label>
           <label class="field"><span>رنگ دکمه</span><?= nexora_testservice_style_select('', 'btn_style', 'ts_edit_style') ?></label>
           <label class="field"><span>ایموجی پرمیوم</span><input class="input ms-emoji-field" data-ms-max="1" name="btn_emoji_id" id="ts_edit_emoji" placeholder="آیدی عددی یا {emoji:نام}"></label>
@@ -460,35 +449,6 @@ $tsInboundField = function (string $id, array $selected = []) use ($panelInbound
 </div>
 
 <script>
-// Only the inbounds of the selected panel are offered.
-window.tsFilterInbounds = function (box) {
-    if (!box) return;
-    var panelSelect = null;
-    if (box.id === 'ts_add_inbounds') {
-        panelSelect = document.getElementById('ts_add_panel');
-    } else if (box.id === 'ts_edit_inbounds') {
-        panelSelect = document.getElementById('ts_edit_panel');
-    }
-    var panel = panelSelect ? panelSelect.value : '';
-    var labels = box.querySelectorAll('.ts-inbound');
-    for (var i = 0; i < labels.length; i++) {
-        var label = labels[i];
-        var input = label.querySelector('input[type=checkbox]');
-        var owner = label.getAttribute('data-panel') || '';
-        if (owner && panel && owner !== panel) {
-            label.style.display = 'none';
-            if (input) {
-                input.checked = false;
-                input.disabled = true;
-            }
-        } else {
-            label.style.display = '';
-            if (input) {
-                input.disabled = false;
-            }
-        }
-    }
-};
 window.openEditTest = function (p) {
     p = p || {};
     document.getElementById('ts_edit_id').value = p.id || '';
@@ -505,21 +465,15 @@ window.openEditTest = function (p) {
     document.getElementById('ts_edit_emoji').value = p.btn_emoji_id || '';
     document.getElementById('ts_edit_position').value = p.position || 0;
     document.getElementById('ts_edit_status').value = p.status_product || 'active';
-    document.getElementById('ts_edit_protocol').value = '';
+    // The account the administrator named is the one the test is made with.
+    document.getElementById('ts_edit_protocol').value = p.protocol_account || '';
+    // The panel of the test: the location of the row is the name of the panel.
     var sel = document.getElementById('ts_edit_panel');
     if (sel) {
+        var tsLocation = p.Location || p.namepanel || '';
         for (var i = 0; i < sel.options.length; i++) {
-            sel.options[i].selected = sel.options[i].value === (p.namepanel || '');
+            sel.options[i].selected = sel.options[i].value === tsLocation;
         }
-    }
-    var inb = document.getElementById('ts_edit_inbounds');
-    if (inb) {
-        var wanted = (p.inbounds || []).map(function (v) { return String(v); });
-        var boxes = inb.querySelectorAll('input[type=checkbox]');
-        for (var j = 0; j < boxes.length; j++) {
-            boxes[j].checked = boxes[j].value !== '' && wanted.indexOf(boxes[j].value) !== -1;
-        }
-        window.tsFilterInbounds(inb);
     }
     var st = document.getElementById('ts_edit_style');
     if (st) {

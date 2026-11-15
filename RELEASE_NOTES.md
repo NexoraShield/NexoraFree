@@ -1,5 +1,20 @@
 # Nexora Bot — Release Notes
 
+## v1.22.91 (2026-11-15) — The test service of the web panel is made again, and the panel of a product never goes away
+
+**The test service was announced but never made**
+- The volume of a product that the owner makes in the web panel can have a fraction (0.097656 GB = 100 MB), and the limit of the account became a fractional number of bytes. The panel refused it: "Input should be a valid integer". The limit of every account is a whole number of bytes now, everywhere it is made (the buy of the bot, the buy of the web application, the test service, the buy with the balance and the buy of the agent panel).
+- The test service of Arvan (the three test services of the web panel, each one with the group of the account the administrator named) is made again.
+
+**The panel of a product never goes away any more**
+- The form of the edit of the test service looked for the panel of the product in a field that did not exist, so the panel was never chosen and the test service lost its panel when it was saved. The same happened with the account the administrator named: it was emptied on every save.
+- An empty field now means "it was not changed": the panel of the product and the account the administrator named stay as they were.
+
+**One box instead of two**
+- The list of the inbounds (the extra ticks) is gone from the product and from the test service: the group of the product is the group of the account the administrator named, and the inbounds of the panel are used when there is no such account.
+
+---
+
 ## v1.22.90 (2026-11-15) — The product remembers the group of the account the administrator named, and the orphan accounts are never created again
 
 **The product and the test service now really work like the bot**

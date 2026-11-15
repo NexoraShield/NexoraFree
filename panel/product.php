@@ -8,58 +8,6 @@ if (is_file($__nexoraStyleLib)) {
 require_once __DIR__ . '/../panel_protocol.php';
 require_auth();
 
-// A product can define its own inbound(s). When the product has no inbound
-// of its own the panel default is used (see panels/Api/Marzban.php).
-function nexora_product_inbound_list($panel): array
-{
-    $raw = json_decode((string) ($panel['inbounds'] ?? ''), true);
-    $out = [];
-    if (is_array($raw)) {
-        foreach ($raw as $v) {
-            if (is_scalar($v) && (string) $v !== '') {
-                $out[] = (string) $v;
-            }
-        }
-    }
-    return array_values(array_unique($out));
-}
-function nexora_product_inbound_value($post): ?string
-{
-    $list = $post['inbounds_product'] ?? [];
-    if (!is_array($list)) {
-        $list = ($list === '' || $list === null) ? [] : [$list];
-    }
-    $list = array_values(array_unique(array_filter(array_map('strval', $list), fn($v) => $v !== '')));
-    if (!$list) {
-        return null;
-    }
-    return json_encode(array_values($list));
-}
-function nexora_product_inbound_field($panels, $selected = [], $prefix = ''): string
-{
-    $selected = array_map('strval', (array) $selected);
-    $h = '<div style="max-height:170px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px">';
-    $any = false;
-    foreach ($panels as $pl) {
-        $list = nexora_product_inbound_list($pl);
-        if (!$list) {
-            continue;
-        }
-        $any = true;
-        $h .= '<div style="margin-bottom:6px"><b style="font-size:.75rem">' . htmlspecialchars((string) $pl['name_panel']) . '</b>';
-        foreach ($list as $inb) {
-            $chk = in_array($inb, $selected, true) ? ' checked' : '';
-            $h .= '<label style="display:flex;gap:6px;align-items:center;font-size:.78rem;padding:2px 0;cursor:pointer">'
-                . '<input type="checkbox" name="inbounds_product[]" value="' . htmlspecialchars($inb) . '"' . $chk . '>'
-                . '<span style="direction:ltr">' . htmlspecialchars($inb) . '</span></label>';
-        }
-        $h .= '</div>';
-    }
-    if (!$any) {
-        $h .= '<div style="font-size:.78rem;color:var(--mute)">برای این پنل هنوز اینباندی تنظیم نشده است. ابتدا از صفحه پنل‌ها گزینه «تنظیم پروتکل و اینباند» را بزنید.</div>';
-    }
-    return $h . '</div>';
-}
 
 // Sets the protocol / inbound of the panel with the data of an account that
 // already exists inside that panel. Returns the message for the admin.
@@ -92,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add')
   // the group every customer of this product is created in, with the specs of
   // that group. The panel itself is never changed, so the other products of
   // the panel keep their own inbounds.
-  $protocol = nexora_product_protocol_for_product($pdo, $panelName, $reference, nexora_product_inbound_value($_POST), '');
+  $protocol = nexora_product_protocol_for_product($pdo, $panelName, $reference, '', '');
   try {
     db_query(
       $pdo,
@@ -118,10 +66,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit'
   if ($pid && $name !== '') {
     $panelName = trim((string) ($_POST['namepanel'] ?? ''));
     $reference = trim((string) ($_POST['protocol_account'] ?? ''));
+    // The panel of the product never goes away: an empty field means that the
+    // panel was not changed, not that the product has no panel any more. The
+    // same for the account the administrator named.
+    $current = db_fetch($pdo, "SELECT Location, protocol_account FROM product WHERE id = ?", [$pid]);
+    if ($panelName === '') {
+        $panelName = (string) ($current['Location'] ?? '');
+    }
+    if ($reference === '') {
+        $reference = (string) ($current['protocol_account'] ?? '');
+    }
     // The group of the account the administrator named: the customers of this
     // product are created in that group, with the specs of that group. The
     // panel itself is not changed.
-    $protocol = nexora_product_protocol_for_product($pdo, $panelName, $reference, nexora_product_inbound_value($_POST), '');
+    $protocol = nexora_product_protocol_for_product($pdo, $panelName, $reference, '', '');
     try {
       $pdo->beginTransaction();
       db_query(
@@ -317,10 +275,6 @@ include __DIR__ . '/inc/layout_head.php';
             <input type="text" name="note_product" class="input" placeholder="<?= htmlspecialchars($textbotlang['panel']['productDescriptionOptional']) ?>">
           </div>
           <div class="field full">
-            <label>اینباند اختصاصی محصول (اختیاری)</label>
-            <?= nexora_product_inbound_field($panels, [], 'add') ?>
-            <small style="display:block;color:var(--mute);font-size:.72rem;margin-top:5px">اگر اینباندی انتخاب نشود، اینباند پیش‌فرض پنل استفاده می‌شود. سرویس‌های این محصول با اینباند ساخته می‌شوند.</small>
-          </div>
           <div class="field full">
             <label>نام کاربری یک اکانت داخل همان پنل (برای تنظیم پروتکل و اینباند)</label>
             <input type="text" name="protocol_account" class="input" placeholder="اختیاری — مثلاً نام کاربری یکی از اکانت‌های موجود در پنل">
@@ -403,8 +357,6 @@ include __DIR__ . '/inc/layout_head.php';
           </div>
           <div class="field full">
             <label>اینباند اختصاصی محصول (اختیاری)</label>
-            <div id="edit_inbounds"><?= nexora_product_inbound_field($panels, [], 'edit') ?></div>
-            <small style="display:block;color:var(--mute);font-size:.72rem;margin-top:5px">اگر اینباندی انتخاب نشود، اینباند پیش‌فرض پنل استفاده می‌شود.</small>
           </div>
           <div class="field full">
             <label>نام کاربری یک اکانت داخل همان پنل (برای تنظیم پروتکل و اینباند)</label>

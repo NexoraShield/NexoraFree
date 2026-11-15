@@ -208,7 +208,7 @@ function inv_invoice_add(array $data, string $method): void
         $datetimestep = $product['Service_time'] == 0 ? 0 : strtotime(date("Y-m-d H:i:s", $datetimestep));
         $datac = array(
             'expire' => $datetimestep,
-            'data_limit' => $product['Volume_constraint'] * pow(1024, 3),
+            'data_limit' => (int) round($product['Volume_constraint'] * pow(1024, 3)),
             'from_id' => $data['chat_id'],
             'username' => "",
             'type' => 'add order by admin'

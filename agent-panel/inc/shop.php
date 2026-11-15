@@ -774,7 +774,7 @@ if (!function_exists('nx_agent_buy_product')) {
                     $timestamp = $days > 0 ? strtotime(date("Y-m-d H:i:s", strtotime("+" . $days . "days"))) : 0;
                     $datac = [
                         'expire' => $timestamp,
-                        'data_limit' => (float) ($product['Volume_constraint'] ?? 0) * pow(1024, 3),
+                        'data_limit' => (int) round((float) ($product['Volume_constraint'] ?? 0) * pow(1024, 3)),
                         'from_id' => (string) $customer['id'],
                         'username' => $cleanName,
                         'type' => 'buy',

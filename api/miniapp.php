@@ -1032,7 +1032,7 @@ function mini_test_purchase(array $data, string $method, array $user_info): void
     ));
     $datac = [
         'expire' => strtotime(date("Y-m-d H:i:s", strtotime("+" . $hours . "hours"))),
-        'data_limit' => $volumeGb * 1073741824,
+        'data_limit' => (int) round($volumeGb * 1073741824),
         'from_id' => (int) $user_info['id'],
         'username' => (string) ($user_info['username'] ?? ''),
         'type' => 'usertest',
@@ -1367,7 +1367,7 @@ function mini_purchase(array $data, string $method): void
         }
         $datac = array(
             'expire' => $datetimestep,
-            'data_limit' => $product['Volume_constraint'] * pow(1024, 3),
+            'data_limit' => (int) round($product['Volume_constraint'] * pow(1024, 3)),
             'from_id' => $user_info['id'],
             'username' => $user_info['username'],
             'type' => 'buy'

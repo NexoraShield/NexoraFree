@@ -15,28 +15,16 @@ window.openEditModal = function (p) {
         proto.value = p.protocol_account || '';
     }
 
+    // The panel of the product: the location of the row is the name of the
+    // panel.
     var sel = document.getElementById('edit_panel');
     if (sel) {
+        var location = p.Location || p.namepanel || '';
         for (var i = 0; i < sel.options.length; i++) {
-            sel.options[i].selected = sel.options[i].value === (p.Location || '');
+            sel.options[i].selected = sel.options[i].value === location;
         }
     }
 
-    // per product inbound checkboxes
-    var inbWrap = document.getElementById('edit_inbounds');
-    if (inbWrap) {
-        var selectedInbounds = [];
-        try {
-            var parsedInbounds = JSON.parse(p.inbounds || '[]');
-            if (Array.isArray(parsedInbounds)) {
-                selectedInbounds = parsedInbounds.map(function (v) { return String(v); });
-            }
-        } catch (e) { }
-        var inbBoxes = inbWrap.querySelectorAll('input[name="inbounds_product[]"]');
-        for (var j = 0; j < inbBoxes.length; j++) {
-            inbBoxes[j].checked = selectedInbounds.indexOf(inbBoxes[j].value) !== -1;
-        }
-    }
 
     openModal('editModal');
 };

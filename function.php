@@ -2037,7 +2037,7 @@ function DirectPayment($order_id, $image = 'images.jpg')
         }
         $datac = array(
             'expire' => $timestamp,
-            'data_limit' => $get_invoice['Volume'] * pow(1024, 3),
+            'data_limit' => (int) round($get_invoice['Volume'] * pow(1024, 3)),
             'from_id' => $Balance_id['id'],
             'username' => $Balance_id['username'],
             'type' => 'buy'

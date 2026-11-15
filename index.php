@@ -4427,7 +4427,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     }
     $datac = array(
         'expire' => $datetimestep,
-        'data_limit' => $info_product['Volume_constraint'] * pow(1024, 3),
+        'data_limit' => (int) round($info_product['Volume_constraint'] * pow(1024, 3)),
         'from_id' => $from_id,
         'username' => $username,
         'type' => 'buy'
@@ -4974,7 +4974,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     }
     $datac = array(
         'expire' => strtotime(date("Y-m-d H:i:s", $datep)),
-        'data_limit' => $info_product['Volume_constraint'] * pow(1024, 3),
+        'data_limit' => (int) round($info_product['Volume_constraint'] * pow(1024, 3)),
         'from_id' => $from_id,
         'username' => $username,
         'type' => 'buyomdh'
@@ -6959,7 +6959,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     $testHours = intval($testProduct['Service_time']);
     $testDatac = [
         'expire' => strtotime(date("Y-m-d H:i:s", strtotime("+" . $testHours . "hours"))),
-        'data_limit' => $testVolumeGb * 1073741824,
+        'data_limit' => (int) round($testVolumeGb * 1073741824),
         'from_id' => $from_id,
         'username' => $username,
         'type' => 'usertest'
