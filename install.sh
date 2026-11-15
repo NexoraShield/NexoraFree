@@ -272,7 +272,11 @@ if [[ "$FORCE" == "1" ]]; then
     while IFS= read -r -d '' f; do
         rel="${f#./}"
         mkdir -p "$TARGET/$(dirname "$rel")"
-        cp -- "$PACKAGE_DIR/$rel" "$TARGET/$rel"
+        # The file is put in place with a rename: the bot may answer while
+        # the new code is written, so a request reads the old file or the
+        # new one, never a half written file.
+        cp -- "$PACKAGE_DIR/$rel" "$TARGET/$rel.nxnew"
+        mv -f -- "$TARGET/$rel.nxnew" "$TARGET/$rel"
     done < <(find . -type f -not -path './install.sh' -not -path './migrate.php' -not -path './uninstall.sh' -not -path './manifest.sha256' -not -path './config.php' -not -path './storage/*' -not -path './.git/*' -not -path './install/*' -print0)
     cd "$TARGET"
     echo "    All files copied (FORCE mode)"
@@ -282,7 +286,11 @@ else
     while IFS= read -r -d '' f; do
         rel="${f#./}"
         mkdir -p "$TARGET/$(dirname "$rel")"
-        cp -- "$PACKAGE_DIR/$rel" "$TARGET/$rel"
+        # The file is put in place with a rename: the bot may answer while
+        # the new code is written, so a request reads the old file or the
+        # new one, never a half written file.
+        cp -- "$PACKAGE_DIR/$rel" "$TARGET/$rel.nxnew"
+        mv -f -- "$TARGET/$rel.nxnew" "$TARGET/$rel"
     done < <(find . -type f -not -path './install.sh' -not -path './migrate.php' -not -path './uninstall.sh' -not -path './manifest.sha256' -not -path './config.php' -not -path './storage/*' -not -path './.git/*' -not -path './nexora-update.sh' -not -path './install/*' -print0)
     cd "$TARGET"
     echo "    All files copied"
