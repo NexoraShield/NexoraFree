@@ -1,5 +1,12 @@
 # Nexora Bot — Release Notes
 
+## v1.22.97 (2026-11-15) — The change of a row of the top up of the reseller shop is saved now
+
+- The page of the reseller shop answered every request of the browser by itself, so the change of a row of the tab of the top up never reached the tab: the message of the success was shown, but nothing was saved. The page leaves the actions of the top up to the tab now (the same was never broken in the tab of the top up of the agent panel).
+
+---
+
+
 ## v1.22.96 (2026-11-15) — The two keys in the shops of the panels, and the credit of the panel is not written any more
 
 - The two small keys that move a row up and down are in every list of the panels now: the products of the reseller panel, the products of the agent panel, and the options of the top up of the panel.

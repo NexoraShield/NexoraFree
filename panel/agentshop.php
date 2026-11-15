@@ -101,8 +101,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
         nexora_agent_shop_set_questions('agentshop', $list);
         flash('success', count($list) . ' سوال برای مشتری ذخیره شد.');
     }
-    header('Location: agentshop.php?tab=' . ($shopTab === 'products' ? 'products' : $shopTab));
-    exit;
+    // The actions of the top up belong to the tab of the top up: the tab
+    // saves them and ends the request itself. The page must not answer them
+    // here, or the change of a row would never be saved.
+    if (strpos($action, 'topup_') !== 0) {
+        header('Location: agentshop.php?tab=' . ($shopTab === 'products' ? 'products' : $shopTab));
+        exit;
+    }
 }
 
 if (isset($_GET['delete'])) {
