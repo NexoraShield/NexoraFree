@@ -1,5 +1,13 @@
 # Nexora Bot — Release Notes
 
+## v1.22.89 (2026-11-15) — The page of the shops of the web panel works and is in the menu
+
+- The page of the shops of the web panel ("فروشگاه‌های ربات") stopped in the middle with a fatal error: the picture of the button of the shop of the agent panel was made in the tab of the agent panel, and the page of the shops does not load that tab. The owner never saw the shops of the bot.
+- The picture of the button of a shop is made once now, so the two shops (the reseller panel and the agent panel) draw their buttons the same way, with the name the owner has chosen and the premium emoji of the bot.
+- The page of the shops is in the menu of the panel, so it can be found.
+
+---
+
 ## v1.22.88 (2026-11-14) — The bot writes a message in a channel and the bot updates itself from inside the bot
 
 **The message of the channel ("متن در کانال")**
