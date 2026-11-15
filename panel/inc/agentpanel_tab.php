@@ -36,17 +36,26 @@ function nexora_agentpanel_style_select($selected, string $name = 'btn_style', s
     }
     return $h . '</select>';
 }
-function nexora_agentpanel_preview($name, $style, $emoji, $colors): string
-{
-    $bg = $colors[$style] ?? 'var(--surface-3)';
-    $fg = ($style !== '' && isset($colors[$style])) ? '#fff' : 'inherit';
-    // The premium emoji of the panel is shown as the picture of the emoji, the
-    // same way the reseller shop shows it.
-    $icon = function_exists('nexora_emoji_preview_html') ? nexora_emoji_preview_html((string) $emoji) : '';
-    $label = function_exists('nexora_emoji_text_to_html')
-        ? nexora_emoji_text_to_html((string) $name)
-        : htmlspecialchars((string) $name);
-    return '<span style="display:inline-block;background:' . $bg . ';color:' . $fg . ';border-radius:8px;padding:4px 12px;font-size:.8rem">' . $icon . $label . '</span>';
+/**
+ * The picture of a button of the shop of the agent panel.
+ *
+ * The picture of the button is made once for the shops (the page of the shops
+ * shows both of them), so this one only points there.
+ */
+if (!function_exists('nexora_agentpanel_preview')) {
+    function nexora_agentpanel_preview($name, $style, $emoji, $colors): string
+    {
+        if (function_exists('nexora_shop_preview')) {
+            return nexora_shop_preview($name, $style, $emoji, $colors);
+        }
+        $bg = $colors[$style] ?? 'var(--surface-3)';
+        $fg = ($style !== '' && isset($colors[$style])) ? '#fff' : 'inherit';
+        $icon = function_exists('nexora_emoji_preview_html') ? nexora_emoji_preview_html((string) $emoji) : '';
+        $label = function_exists('nexora_emoji_text_to_html')
+            ? nexora_emoji_text_to_html((string) $name)
+            : htmlspecialchars((string) $name);
+        return '<span style="display:inline-block;background:' . $bg . ';color:' . $fg . ';border-radius:8px;padding:4px 12px;font-size:.8rem">' . $icon . $label . '</span>';
+    }
 }
 
 // The panels that can be picked for the agent panel are the ones the

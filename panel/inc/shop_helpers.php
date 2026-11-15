@@ -97,7 +97,15 @@ function nexora_agentshop_style_select($selected, string $name = 'btn_style', st
     }
     return $h . '</select>';
 }
-function nexora_agentshop_preview($name, $style, $emoji, $colors): string
+/**
+ * The picture of a button of a shop, the way the bot draws it.
+ *
+ * The name of the product is the one the owner has chosen, the premium emoji
+ * is the picture of the emoji of the bot and the colour is the colour of the
+ * button. The two shops (the reseller panel and the agent panel) draw their
+ * buttons the same way, so the picture is made here once.
+ */
+function nexora_shop_preview($name, $style, $emoji, $colors): string
 {
     $bg = $colors[$style] ?? 'var(--surface-3)';
     $fg = ($style !== '' && isset($colors[$style])) ? '#fff' : 'inherit';
@@ -106,4 +114,19 @@ function nexora_agentshop_preview($name, $style, $emoji, $colors): string
         ? nexora_emoji_text_to_html((string) $name)
         : htmlspecialchars((string) $name);
     return '<span style="display:inline-block;background:' . $bg . ';color:' . $fg . ';border-radius:8px;padding:4px 12px;font-size:.8rem">' . $icon . $label . '</span>';
+}
+function nexora_agentshop_preview($name, $style, $emoji, $colors): string
+{
+    return nexora_shop_preview($name, $style, $emoji, $colors);
+}
+/**
+ * The picture of a button of the shop of the agent panel.
+ *
+ * The page of the shops shows both of them, so the picture of the button of
+ * the agent panel has to be here as well (the tab of the agent panel is not
+ * loaded there).
+ */
+function nexora_agentpanel_preview($name, $style, $emoji, $colors): string
+{
+    return nexora_shop_preview($name, $style, $emoji, $colors);
 }
