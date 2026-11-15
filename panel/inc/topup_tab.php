@@ -81,6 +81,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
                 flash('error', 'خطای دیتابیس: ' . $e->getMessage());
             }
         }
+    } elseif ($action === 'topup_credit') {
+        // The credit is written from the list of the options: the number is
+        // shown to the customer when he buys the option.
+        $creditId = (int) ($_POST['edit_id'] ?? 0);
+        $creditValue = (float) ($_POST['topup_credit'] ?? 0);
+        if ($creditId > 0 && $creditValue >= 0) {
+            try {
+                $st = $pdo->prepare("UPDATE panel_topup_product SET credit = ? WHERE id = ? AND shop = ?");
+                $st->execute([(string) $creditValue, $creditId, $topupShop]);
+                flash('success', 'اعتبار گزینه ذخیره شد.');
+            } catch (Throwable $e) {
+                flash('error', 'اعتبار ذخیره نشد: ' . $e->getMessage());
+            }
+        }
     } elseif ($action === 'topup_move') {
         $orderId = (int) ($_POST['id'] ?? 0);
         $orderDir = (string) ($_POST['dir'] ?? '');
@@ -119,11 +133,8 @@ foreach (nexora_color_palette() as $slug => $info) {
         $topupColors[$slug] = $info['hex'];
     }
 }
-// The credit of the panel belongs to the top up of the agent panel: there
-// the credit goes to the wallet of the customer. In the shop of the
-// reseller the package is delivered by hand and its volume is written in
-// the column of the unit, so the credit has no meaning there.
-$showTopupCredit = ($topupShop === 'agentpanelshop');
+// The credit of the panel is shown to the customer when he buys the option,
+// so it has its column in both shops.
 ?>
 <div class="card fade-up" style="margin-bottom:18px">
   <div class="card-head"><div><div class="card-title">🎨 دکمه «شارژ پنل»</div>
@@ -153,10 +164,10 @@ $showTopupCredit = ($topupShop === 'agentpanelshop');
     <div><button class="btn btn-primary" onclick="openModal('addTopupModal')"><?= icon('plus', 14) ?> افزودن گزینه</button></div>
   </div>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>پیش‌نمایش</th><th>نام</th><th>مبلغ</th><?php if ($showTopupCredit): ?><th>اعتبار</th><?php endif; ?><th>واحد</th><th>توضیحات</th><th>رنگ</th><th>ایموجی</th><th>وضعیت</th><th>ترتیب</th><th></th></tr></thead>
+    <thead><tr><th>پیش‌نمایش</th><th>نام</th><th>مبلغ</th><th>اعتبار</th><th>واحد</th><th>توضیحات</th><th>رنگ</th><th>ایموجی</th><th>وضعیت</th><th>ترتیب</th><th></th></tr></thead>
     <tbody>
       <?php if (!$topupItems): ?>
-        <tr><td colspan="<?= $showTopupCredit ? 11 : 10 ?>" style="text-align:center;color:var(--mute);padding:22px">هنوز گزینه‌ای برای شارژ تعریف نشده است.</td></tr>
+        <tr><td colspan="11" style="text-align:center;color:var(--mute);padding:22px">هنوز گزینه‌ای برای شارژ تعریف نشده است.</td></tr>
       <?php endif; ?>
       <?php $ordIndex = 0;
       foreach ($topupItems as $item):
@@ -166,7 +177,13 @@ $showTopupCredit = ($topupShop === 'agentpanelshop');
           <td><?= nexora_agentshop_preview($item['name'] ?? '', (string) ($item['btn_style'] ?? ''), (string) ($item['btn_emoji_id'] ?? ''), $topupColors) ?></td>
           <td><?= function_exists('nexora_emoji_text_to_html') ? nexora_emoji_text_to_html((string) ($item['name'] ?? '')) : htmlspecialchars((string) ($item['name'] ?? '')) ?></td>
           <td><?= number_format((float) ($item['price'] ?? 0)) ?></td>
-          <?php if ($showTopupCredit): ?><td><?= number_format((float) ($item['credit'] ?? 0)) ?></td><?php endif; ?>
+          <td>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span><?= number_format((float) ($item['credit'] ?? 0)) ?></span>
+              <button class="ord-btn" type="button" title="ویرایش اعتبار"
+                onclick="openTopupCredit(<?= (int) $item['id'] ?>, <?= (float) ($item['credit'] ?? 0) ?>)">✎</button>
+            </div>
+          </td>
           <td><?= htmlspecialchars((string) ($item['unit'] ?? '')) ?></td>
           <td style="min-width:220px"><?= nl2br(htmlspecialchars((string) ($item['description'] ?? ''))) ?></td>
           <td><span class="pill"><?= htmlspecialchars((string) ($item['btn_style'] ?? 'پیش‌فرض')) ?></span></td>
@@ -271,7 +288,38 @@ $showTopupCredit = ($topupShop === 'agentpanelshop');
   </div>
 </div>
 
+<div class="modal-veil" id="topupCreditModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>اعتبار داخل پنل</h3>
+      <button class="modal-x" onclick="closeModal('topupCreditModal')"><?= icon('close', 14) ?></button>
+    </div>
+    <form method="POST">
+      <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+      <input type="hidden" name="action" value="topup_credit">
+      <input type="hidden" name="edit_id" id="topup_credit_id">
+      <div class="modal-body">
+        <div class="form-grid">
+          <label class="field"><span>اعتبار داخل پنل (تومان)</span>
+            <input class="input" type="number" name="topup_credit" id="topup_credit_value" value="0" required>
+            <small style="display:block;color:var(--mute);font-size:.72rem;margin-top:5px">این عدد موقع خرید به مشتری نشان داده می‌شود.</small>
+          </label>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-primary" type="submit"><?= icon('check', 13) ?> ذخیره</button>
+        <button class="btn btn-ghost" type="button" onclick="closeModal('topupCreditModal')">انصراف</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
+window.openTopupCredit = function (id, value) {
+    document.getElementById('topup_credit_id').value = id;
+    document.getElementById('topup_credit_value').value = value;
+    openModal('topupCreditModal');
+};
 window.openEditTopup = function (p) {
     p = p || {};
     document.getElementById('tu_edit_id').value = p.id || '';

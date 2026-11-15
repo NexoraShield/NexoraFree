@@ -1,5 +1,13 @@
 # Nexora Bot — Release Notes
 
+## v1.23.02 (2026-11-15) — The credit of the options of the top up is written from the list
+
+- The column of the credit is back in the list of the options of the top up (the number is shown to the customer when he buys the option), in both shops.
+- The credit can be written from the list: the little pencil next to the number opens a small window with the number and saves it. The window of the edit of the option stays as it is (the credit of a row is never wiped by it).
+
+---
+
+
 ## v1.23.01 (2026-11-15) — The column of the credit is only in the top up of the agent panel
 
 - The column of the credit had no meaning in the top up of the reseller shop (the volume of the package is written in the column of the unit and the package is delivered by hand): the column is gone there.
