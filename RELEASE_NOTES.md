@@ -1,5 +1,13 @@
 # Nexora Bot — Release Notes
 
+## v1.22.95 (2026-11-15) — The two small keys are more beautiful
+
+- The two keys that move a product up and down are in one little glass button now: a soft shine on the top, a hairline between the two keys, and the light of the accent color (and a small glow) when the mouse is on a key.
+- The key that points up of the first product and the key that points down of the last product are dimmed (they are off).
+
+---
+
+
 ## v1.22.94 (2026-11-15) — Two small keys that move a product up and down
 
 - Every row of the list of the products has two small keys now: the one that points up moves the product one step up and the one that points down moves it one step down. The key of the first product that points up and the key of the last product that points down are grey (they are off).
