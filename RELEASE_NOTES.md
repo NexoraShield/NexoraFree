@@ -1,5 +1,13 @@
 # Nexora Bot — Release Notes
 
+## v1.23.01 (2026-11-15) — The column of the credit is only in the top up of the agent panel
+
+- The column of the credit had no meaning in the top up of the reseller shop (the volume of the package is written in the column of the unit and the package is delivered by hand): the column is gone there.
+- The column of the credit is still in the top up of the agent panel, because there the credit goes to the wallet of the customer.
+
+---
+
+
 ## v1.23.00 (2026-11-15) — The test service comes with its link, and the administrator of the bot is not counted
 
 - The message of the test service had no link in it (the part «لینک اتصال:» was empty) and the volume was wrong («0.0977 مگابایت» instead of «100 مگابایت»). The link of the subscription of the panel (and the links of the configuration) is in the message now, exactly like a bought service, and the volume is counted in megabytes.

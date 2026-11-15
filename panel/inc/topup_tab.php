@@ -119,6 +119,11 @@ foreach (nexora_color_palette() as $slug => $info) {
         $topupColors[$slug] = $info['hex'];
     }
 }
+// The credit of the panel belongs to the top up of the agent panel: there
+// the credit goes to the wallet of the customer. In the shop of the
+// reseller the package is delivered by hand and its volume is written in
+// the column of the unit, so the credit has no meaning there.
+$showTopupCredit = ($topupShop === 'agentpanelshop');
 ?>
 <div class="card fade-up" style="margin-bottom:18px">
   <div class="card-head"><div><div class="card-title">🎨 دکمه «شارژ پنل»</div>
@@ -148,10 +153,10 @@ foreach (nexora_color_palette() as $slug => $info) {
     <div><button class="btn btn-primary" onclick="openModal('addTopupModal')"><?= icon('plus', 14) ?> افزودن گزینه</button></div>
   </div>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>پیش‌نمایش</th><th>نام</th><th>مبلغ</th><th>اعتبار</th><th>واحد</th><th>توضیحات</th><th>رنگ</th><th>ایموجی</th><th>وضعیت</th><th>ترتیب</th><th></th></tr></thead>
+    <thead><tr><th>پیش‌نمایش</th><th>نام</th><th>مبلغ</th><?php if ($showTopupCredit): ?><th>اعتبار</th><?php endif; ?><th>واحد</th><th>توضیحات</th><th>رنگ</th><th>ایموجی</th><th>وضعیت</th><th>ترتیب</th><th></th></tr></thead>
     <tbody>
       <?php if (!$topupItems): ?>
-        <tr><td colspan="11" style="text-align:center;color:var(--mute);padding:22px">هنوز گزینه‌ای برای شارژ تعریف نشده است.</td></tr>
+        <tr><td colspan="<?= $showTopupCredit ? 11 : 10 ?>" style="text-align:center;color:var(--mute);padding:22px">هنوز گزینه‌ای برای شارژ تعریف نشده است.</td></tr>
       <?php endif; ?>
       <?php $ordIndex = 0;
       foreach ($topupItems as $item):
@@ -161,7 +166,7 @@ foreach (nexora_color_palette() as $slug => $info) {
           <td><?= nexora_agentshop_preview($item['name'] ?? '', (string) ($item['btn_style'] ?? ''), (string) ($item['btn_emoji_id'] ?? ''), $topupColors) ?></td>
           <td><?= function_exists('nexora_emoji_text_to_html') ? nexora_emoji_text_to_html((string) ($item['name'] ?? '')) : htmlspecialchars((string) ($item['name'] ?? '')) ?></td>
           <td><?= number_format((float) ($item['price'] ?? 0)) ?></td>
-          <td><?= number_format((float) ($item['credit'] ?? 0)) ?></td>
+          <?php if ($showTopupCredit): ?><td><?= number_format((float) ($item['credit'] ?? 0)) ?></td><?php endif; ?>
           <td><?= htmlspecialchars((string) ($item['unit'] ?? '')) ?></td>
           <td style="min-width:220px"><?= nl2br(htmlspecialchars((string) ($item['description'] ?? ''))) ?></td>
           <td><span class="pill"><?= htmlspecialchars((string) ($item['btn_style'] ?? 'پیش‌فرض')) ?></span></td>
