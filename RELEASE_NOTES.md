@@ -1,5 +1,14 @@
 # Nexora Bot — Release Notes
 
+## v1.22.98 (2026-11-15) — The tabs of the pages answer the browser before the page is printed
+
+- The tabs of the pages (the top up, the panels of the agent panel and the panels that were delivered) sent their redirect after the page had begun to print. The browser could not follow it, so it kept the half finished page and asked to send the form again the next time (the change was saved, but the page came back empty and the browser wanted a resend).
+- The tabs get the request before the page is printed now, so the page comes back whole and the change is in it.
+- The order of the products of the reseller shop: the number of the window of the edit is the number of the list of the shop (before, the product could jump to the top of the list of all the products of the bot).
+
+---
+
+
 ## v1.22.97 (2026-11-15) — The change of a row of the top up of the reseller shop is saved now
 
 - The page of the reseller shop answered every request of the browser by itself, so the change of a row of the tab of the top up never reached the tab: the message of the success was shown, but nothing was saved. The page leaves the actions of the top up to the tab now (the same was never broken in the tab of the top up of the agent panel).

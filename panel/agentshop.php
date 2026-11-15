@@ -64,7 +64,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
                         ]
                     );
                     if (isset($_POST['position'])) {
-                        move_display_order($pdo, 'product', $id, (int) $_POST['position']);
+                        // The order is the order of the list of the shop: the
+                        // number the owner writes is the number he sees.
+                        $orderRows = array_map('intval', array_column(db_fetchAll($pdo, "SELECT id FROM product WHERE agent = ? ORDER BY display_order, id", [NEXORA_AGENT_SHOP_MARKER]), 'id'));
+                        move_display_order($pdo, 'product', $id, (int) $_POST['position'], $orderRows);
                     }
                     flash('success', 'محصول بروزرسانی شد.');
                 }
@@ -108,6 +111,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
         header('Location: agentshop.php?tab=' . ($shopTab === 'products' ? 'products' : $shopTab));
         exit;
     }
+}
+
+// The tab of the top up answers the browser itself. It has to get the
+// request before the page begins to print: a redirect can not be sent
+// after the page has begun (the browser keeps the half finished page and
+// asks to send the form again the next time).
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $shopTab === 'topup' && strpos((string) ($_POST['action'] ?? ''), 'topup_') === 0) {
+    $topupShop = 'agentshop';
+    $topupReturn = 'agentshop.php';
+    include __DIR__ . '/inc/topup_tab.php';
+    exit;
 }
 
 if (isset($_GET['delete'])) {

@@ -193,6 +193,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// The tabs of this page answer the browser themselves. They have to get
+// the request before the page begins to print: a redirect can not be sent
+// after the page has begun (the browser keeps the half finished page and
+// asks to send the form again the next time).
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $nxTabAction = (string) ($_POST['action'] ?? '');
+    if ($agentTab === 'panels' && in_array($nxTabAction, ['ap_add', 'ap_edit', 'ap_delete', 'ap_move'], true)) {
+        $panelReturn = 'agents.php';
+        include __DIR__ . '/inc/agentpanel_tab.php';
+        exit;
+    }
+    if ($agentTab === 'accounts' && in_array($nxTabAction, ['apa_credit', 'apa_reset', 'apa_delete'], true)) {
+        $accountsReturn = 'agents.php';
+        include __DIR__ . '/inc/agentpanel_accounts_tab.php';
+        exit;
+    }
+    if ($agentTab === 'topup' && strpos($nxTabAction, 'topup_') === 0) {
+        $topupShop = 'agentpanelshop';
+        $topupReturn = 'agents.php';
+        include __DIR__ . '/inc/topup_tab.php';
+        exit;
+    }
+}
+
 // The information of the hand over that was just done (it is shown only once).
 $handover = null;
 if (!empty($_SESSION['nx_agent_handover']) && is_array($_SESSION['nx_agent_handover'])) {
