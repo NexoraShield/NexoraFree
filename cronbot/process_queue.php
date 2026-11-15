@@ -35,6 +35,29 @@ try {
         $ok = false; $err = '';
         try {
             if ($q['op_type'] === 'create_user') {
+                // The operation belongs to an invoice. If that invoice is gone
+                // (the order was cleaned up) or the order is over, the account
+                // must not be created any more: an account without an order is
+                // an orphan that nobody can remove any more.
+                $skip = false;
+                $invoiceId = trim((string) ($q['id_invoice'] ?? ''));
+                if ($invoiceId !== '') {
+                    $invStmt = $pdo->prepare("SELECT Status FROM invoice WHERE id_invoice = ? LIMIT 1");
+                    $invStmt->execute([$invoiceId]);
+                    $invRow = $invStmt->fetch(PDO::FETCH_ASSOC);
+                    if (!$invRow) {
+                        $skip = true;
+                        $err = 'the invoice of the operation is gone, the account is not created any more';
+                    } elseif (in_array((string) ($invRow['Status'] ?? ''), ['disabled', 'expired', 'end_of_time'], true)) {
+                        $skip = true;
+                        $err = 'the order of the operation is over, the account is not created any more';
+                    }
+                }
+                if ($skip) {
+                    $pdo->prepare("UPDATE op_queue SET status='failed', last_error=?, updated_at=NOW() WHERE id=?")->execute([$err, $id]);
+                    $failed++;
+                    continue;
+                }
                 $dataoutput = $ManagePanel->createUser($payload['panel'] ?? '', $payload['code_product'] ?? '', $payload['username'] ?? '', $payload['datac'] ?? []);
                 if (is_array($dataoutput) && !empty($dataoutput['username'])) {
                     $ok = true;

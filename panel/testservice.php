@@ -113,13 +113,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
                     }
                 }
                 $inbounds = $inboundList ? json_encode(array_values(array_unique($inboundList))) : '';
+                // The test service may name an account of the panel: the group
+                // of that account is the group the customer of the test is
+                // created in. The panel itself is not changed.
+                $protocol = nexora_product_protocol_for_product($pdo, $panel, $reference, $inbounds, '');
+                $inbounds = $protocol['inbounds'];
                 $volumeUnit = strtolower(trim((string) ($_POST['volume_unit'] ?? 'gb'))) === 'mb' ? 'mb' : 'gb';
                 $volume = nexora_volume_to_gb($_POST['volume_product'] ?? 0, $volumeUnit);
                 if ($action === 'add') {
                     $code = bin2hex(random_bytes(2));
                     db_query(
                         $pdo,
-                        "INSERT INTO product (name_product,code_product,price_product,Volume_constraint,Service_time,Location,agent,data_limit_reset,note,category,hide_panel,one_buy_status,status_product,is_test,btn_style,btn_emoji_id,inbounds) VALUES (?,?,?,?,?,?,?,'no_reset',?,?,'{}','0','active',1,?,?,?)",
+                        "INSERT INTO product (name_product,code_product,price_product,Volume_constraint,Service_time,Location,agent,data_limit_reset,note,category,hide_panel,one_buy_status,status_product,is_test,btn_style,btn_emoji_id,inbounds,proxies,protocol_account) VALUES (?,?,?,?,?,?,?,'no_reset',?,?,'{}','0','active',1,?,?,?,?,?,?)",
                         [
                             $name,
                             $code,
@@ -133,6 +138,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
                             nexora_testservice_clean_style($_POST['btn_style'] ?? '') ?: null,
                             nexora_testservice_clean_emoji($_POST['btn_emoji_id'] ?? '') ?: null,
                             $inbounds === '' ? null : $inbounds,
+                            $protocol['proxies'] === '' ? null : $protocol['proxies'],
+                            $reference !== '' ? $reference : null,
                         ]
                     );
                     $newId = (int) $pdo->lastInsertId();
@@ -142,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
                     $id = (int) ($_POST['edit_id'] ?? 0);
                     db_query(
                         $pdo,
-                        "UPDATE product SET name_product=?,Volume_constraint=?,Service_time=?,Location=?,note=?,status_product=?,is_test=1,btn_style=?,btn_emoji_id=?,inbounds=? WHERE id=?",
+                        "UPDATE product SET name_product=?,Volume_constraint=?,Service_time=?,Location=?,note=?,status_product=?,is_test=1,btn_style=?,btn_emoji_id=?,inbounds=?,proxies=?,protocol_account=? WHERE id=?",
                         [
                             $name,
                             $volume,
@@ -153,6 +160,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
                             nexora_testservice_clean_style($_POST['btn_style'] ?? '') ?: null,
                             nexora_testservice_clean_emoji($_POST['btn_emoji_id'] ?? '') ?: null,
                             $inbounds === '' ? null : $inbounds,
+                            $protocol['proxies'] === '' ? null : $protocol['proxies'],
+                            $reference !== '' ? $reference : null,
                             $id,
                         ]
                     );
@@ -161,12 +170,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
                     }
                     flash('success', 'سرویس تست بروزرسانی شد.');
                 }
-                // The protocol and the inbound of the panel are taken from an
-                // account that already exists inside that panel - the same
-                // way as the bot does it.
-                if ($reference !== '') {
-                    $protocol = nexora_apply_panel_protocol($pdo, $panel, $reference);
-                    $protocolMessage = ($protocol['ok'] ? '✅ ' : '⚠️ ') . $protocol['message'];
+                // The group of the account the administrator named: the
+                // customer of the test is created in that group.
+                if ($reference !== '' && !empty($protocol['message'])) {
+                    flash($protocol['ok'] ? 'success' : 'error', $protocol['message']);
                 }
             } catch (Exception $e) {
                 flash('error', 'خطای دیتابیس: ' . $e->getMessage());

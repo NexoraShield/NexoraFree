@@ -1,5 +1,20 @@
 # Nexora Bot — Release Notes
 
+## v1.22.90 (2026-11-15) — The product remembers the group of the account the administrator named, and the orphan accounts are never created again
+
+**The product and the test service now really work like the bot**
+- The bot has a key called "تنظیم پروتکل و اینباند": the administrator writes the name of an account that already exists in the panel, and the protocol and the inbound of the panel are taken from that account. The web panel had the same field, but it changed the **whole panel** and the product itself never learned anything — so the customer was never created in the group of that account.
+- The product remembers the account now (`protocol_account` on the product). The group of that account is asked again at **every purchase**, so the customer is always created in the group the account is in at that moment, with the specs of that group.
+- The panel itself is never changed any more: the other products of the panel keep their own inbounds. Before this change one product could take the inbounds of the whole panel away from the others.
+- A named account that does not exist (or a panel that cannot be reached) never breaks the purchase: the product keeps what it had and the reason is written in the log.
+- The same code is used for the test services of the web panel.
+
+**An account without an order is never created any more**
+- The queue of the bot retries an account that could not be created (the panel was down). If the order of that operation is gone or over, the account is not created any more: an account without an order is an orphan that nobody can remove any more.
+- The account `8988995603_16f4e746` is not on the panel any more and the fleet does not know it either: the name of an account is `<the telegram id of the buyer>_<the id of the order>`, the order `16f4e746` is gone from every bot of the fleet, so nothing here can bring it back.
+
+---
+
 ## v1.22.89 (2026-11-15) — The page of the shops of the web panel works and is in the menu
 
 - The page of the shops of the web panel ("فروشگاه‌های ربات") stopped in the middle with a fatal error: the picture of the button of the shop of the agent panel was made in the tab of the agent panel, and the page of the shops does not load that tab. The owner never saw the shops of the bot.

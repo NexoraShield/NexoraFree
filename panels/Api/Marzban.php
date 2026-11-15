@@ -243,20 +243,22 @@ function adduser($location, $data_limit, $username_ac, $timestamp, $note = '', $
         return $Check_token;
     }
     $url = $marzban_list_get['url_panel'] . "/api/user";
-    if ($marzban_list_get['inbounds'] != null and $marzban_list_get['inbounds'] != "null") {
-        if ($name_product != false and $name_product != "usertest") {
-            $stmt = $GLOBALS['pdo']->prepare("SELECT * FROM product WHERE name_product = ? AND (Location = ? OR Location = '/all') ORDER BY Location = '/all' LIMIT 1");
-            $stmt->execute([$name_product, $location]);
-            $product = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($product == false || $product['inbounds'] == false) {
-                $inbounds = json_decode($marzban_list_get['inbounds'], true);
-            } else {
-                $inbounds = json_decode($product['inbounds'], true);
-                $marzban_list_get['proxies'] = $product['proxies'];
-            }
-        } else {
-            $inbounds = json_decode($marzban_list_get['inbounds'], true);
-        }
+    $inbounds = null;
+    $product = false;
+    if ($name_product != false and $name_product != "usertest") {
+        $stmt = $GLOBALS['pdo']->prepare("SELECT * FROM product WHERE name_product = ? AND (Location = ? OR Location = '/all') ORDER BY Location = '/all' LIMIT 1");
+        $stmt->execute([$name_product, $location]);
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    // The product may name an account of the panel: the account of the customer
+    // is then created in the group of that account, with the specs of that
+    // group. The group is asked again at every purchase.
+    $__nexoraProtocol = nexora_product_protocol_values($GLOBALS['pdo'], $marzban_list_get, is_array($product) ? $product : []);
+    if ($__nexoraProtocol['inbounds'] !== null) {
+        $inbounds = $__nexoraProtocol['inbounds'];
+    }
+    if ($__nexoraProtocol['proxies'] !== null) {
+        $marzban_list_get['proxies'] = json_encode($__nexoraProtocol['proxies']);
     }
     if ($marzban_list_get['version_panel'] == "1" ? empty($inbounds) : !panelProtocolsConfigured($marzban_list_get['proxies'])) {
         return panelProtocolsMissingError($marzban_list_get['name_panel']);

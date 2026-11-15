@@ -2,6 +2,9 @@
 ini_set('error_log', 'error_log');
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/panels/bootstrap.php';
+// The protocol and the inbound of a product: a product may name an account of
+// the panel, and the customer is created in the group of that account.
+require_once __DIR__ . '/panel_protocol.php';
 
 class ManagePanel
 {
@@ -69,6 +72,19 @@ class ManagePanel
         $expire = $Data_Config['expire'];
         $data_limit = $Data_Config['data_limit'];
         $note = "{$Data_Config['from_id']} | {$Data_Config['username']} | {$Data_Config['type']}";
+        // The product may name an account of the panel (the administrator
+        // writes the name of an account that already exists there). The
+        // account of the customer is then created in the group of that
+        // account, with the specs of that group - and the group is asked
+        // again at every purchase, so it is always the group the account is
+        // in at that moment.
+        $__nexoraProtocol = nexora_product_protocol_values($pdo, $Get_Data_Panel, is_array($Get_Data_Product) ? $Get_Data_Product : []);
+        if ($__nexoraProtocol['inbounds'] !== null) {
+            $Get_Data_Product['inbounds'] = json_encode($__nexoraProtocol['inbounds']);
+        }
+        if ($__nexoraProtocol['proxies'] !== null) {
+            $Get_Data_Product['proxies'] = json_encode($__nexoraProtocol['proxies']);
+        }
         // A test service is a normal service: it must be usable right away and
         // must not wait for the first connection of the customer.
         $forceActive = isset($Get_Data_Product['is_test']) && (int) $Get_Data_Product['is_test'] === 1;

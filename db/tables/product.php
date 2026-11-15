@@ -21,7 +21,8 @@ return [
         display_order INT NOT NULL DEFAULT 0,
         is_test TINYINT(1) NOT NULL DEFAULT 0,
         btn_style VARCHAR(20) NULL,
-        btn_emoji_id VARCHAR(32) NULL
+        btn_emoji_id VARCHAR(32) NULL,
+        protocol_account VARCHAR(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL
         SQL,
     'columns' => [
         ['code_product', null, 'varchar(50)'],
@@ -37,6 +38,7 @@ return [
         ['is_test', '0', "TINYINT(1) NOT NULL DEFAULT 0"],
         ['btn_style', null, 'VARCHAR(20) NULL'],
         ['btn_emoji_id', null, 'VARCHAR(32) NULL'],
+        ['protocol_account', null, 'VARCHAR(200) NULL'],
         ['status_product', 'active', "VARCHAR(20) NOT NULL DEFAULT 'active'"],
         ['display_order', null, 'INT NOT NULL DEFAULT 0'],
     ],

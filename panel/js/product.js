@@ -9,6 +9,12 @@ window.openEditModal = function (p) {
     document.getElementById('edit_note').value = p.note || '';
     document.getElementById('edit_position').value = p.position || '';
 
+    // the account of the panel that shows the group of the product
+    var proto = document.getElementById('edit_protocol');
+    if (proto) {
+        proto.value = p.protocol_account || '';
+    }
+
     var sel = document.getElementById('edit_panel');
     if (sel) {
         for (var i = 0; i < sel.options.length; i++) {

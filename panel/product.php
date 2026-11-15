@@ -72,7 +72,6 @@ function nexora_product_apply_protocol(string $panelName, string $reference): st
     $result = nexora_apply_panel_protocol($GLOBALS['pdo'], $panelName, $reference);
     return ($result['ok'] ? '✅ ' : '⚠️ ') . $result['message'];
 }
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add') {
   csrf_check_post();
   $name = trim($_POST['name_product'] ?? '');
@@ -87,20 +86,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add')
     exit;
   }
   $code = bin2hex(random_bytes(2));
+  $panelName = trim((string) ($_POST['namepanel'] ?? ''));
+  $reference = trim((string) ($_POST['protocol_account'] ?? ''));
+  // The product may name an account of the panel: the group of that account is
+  // the group every customer of this product is created in, with the specs of
+  // that group. The panel itself is never changed, so the other products of
+  // the panel keep their own inbounds.
+  $protocol = nexora_product_protocol_for_product($pdo, $panelName, $reference, nexora_product_inbound_value($_POST), '');
   try {
     db_query(
       $pdo,
-      "INSERT INTO product (name_product,code_product,price_product,Volume_constraint,Service_time,Location,agent,data_limit_reset,note,category,hide_panel,one_buy_status,inbounds) VALUES (?,?,?,?,?,?,?,'no_reset',?,?,'{}','0',?)",
-      [$name, $code, (int) ($_POST['price_product'] ?? 0), (int) ($_POST['volume_product'] ?? 0), (int) ($_POST['time_product'] ?? 0), $_POST['namepanel'] ?? '', $_POST['agent_product'] ?? '', $_POST['note_product'] ?? '', $_POST['category_product'] ?? '', nexora_product_inbound_value($_POST)]
+      "INSERT INTO product (name_product,code_product,price_product,Volume_constraint,Service_time,Location,agent,data_limit_reset,note,category,hide_panel,one_buy_status,inbounds,proxies,protocol_account) VALUES (?,?,?,?,?,?,?,'no_reset',?,?,'{}','0',?,?,?)",
+      [$name, $code, (int) ($_POST['price_product'] ?? 0), (int) ($_POST['volume_product'] ?? 0), (int) ($_POST['time_product'] ?? 0), $panelName, $_POST['agent_product'] ?? '', $_POST['note_product'] ?? '', $_POST['category_product'] ?? '', $protocol['inbounds'] === '' ? null : $protocol['inbounds'], $protocol['proxies'] === '' ? null : $protocol['proxies'], $reference !== '' ? $reference : null]
     );
     db_query($pdo, "UPDATE product SET display_order = id WHERE id = ?", [$pdo->lastInsertId()]);
     flash('success', $textbotlang['panel']['productAddedPrefix'] . $name . $textbotlang['panel']['productAddedSuffix']);
   } catch (Exception $e) {
     flash('error', $textbotlang['panel']['productDbError'] . $e->getMessage());
   }
-  $protocol = nexora_product_apply_protocol($_POST['namepanel'] ?? '', $_POST['protocol_account'] ?? '');
-  if ($protocol !== '') {
-    flash('success', $protocol);
+  if ($protocol['message'] !== '') {
+    flash($protocol['ok'] ? 'success' : 'error', $protocol['message']);
   }
   header('Location: product.php');
   exit;
@@ -111,12 +116,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit'
   $pid = (int) ($_POST['edit_id'] ?? 0);
   $name = trim($_POST['name_product'] ?? '');
   if ($pid && $name !== '') {
+    $panelName = trim((string) ($_POST['namepanel'] ?? ''));
+    $reference = trim((string) ($_POST['protocol_account'] ?? ''));
+    // The group of the account the administrator named: the customers of this
+    // product are created in that group, with the specs of that group. The
+    // panel itself is not changed.
+    $protocol = nexora_product_protocol_for_product($pdo, $panelName, $reference, nexora_product_inbound_value($_POST), '');
     try {
       $pdo->beginTransaction();
       db_query(
         $pdo,
-        "UPDATE product SET name_product=?,price_product=?,Volume_constraint=?,Service_time=?,Location=?,agent=?,note=?,category=?,inbounds=? WHERE id=?",
-        [$name, (int) ($_POST['price_product'] ?? 0), (int) ($_POST['volume_product'] ?? 0), (int) ($_POST['time_product'] ?? 0), $_POST['namepanel'] ?? '', $_POST['agent_product'] ?? '', $_POST['note_product'] ?? '', $_POST['category_product'] ?? '', nexora_product_inbound_value($_POST), $pid]
+        "UPDATE product SET name_product=?,price_product=?,Volume_constraint=?,Service_time=?,Location=?,agent=?,note=?,category=?,inbounds=?,proxies=?,protocol_account=? WHERE id=?",
+        [$name, (int) ($_POST['price_product'] ?? 0), (int) ($_POST['volume_product'] ?? 0), (int) ($_POST['time_product'] ?? 0), $panelName, $_POST['agent_product'] ?? '', $_POST['note_product'] ?? '', $_POST['category_product'] ?? '', $protocol['inbounds'] === '' ? null : $protocol['inbounds'], $protocol['proxies'] === '' ? null : $protocol['proxies'], $reference !== '' ? $reference : null, $pid]
       );
       if (isset($_POST['position'])) {
         move_display_order($pdo, 'product', $pid, (int) $_POST['position']);
@@ -130,9 +141,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit'
       flash('error', $textbotlang['panel']['productErrorPrefix'] . $e->getMessage());
     }
   }
-  $protocol = nexora_product_apply_protocol($_POST['namepanel'] ?? '', $_POST['protocol_account'] ?? '');
-  if ($protocol !== '') {
-    flash('success', $protocol);
+  if (!empty($protocol['message'])) {
+    flash($protocol['ok'] ? 'success' : 'error', $protocol['message']);
   }
   header('Location: product.php');
   exit;

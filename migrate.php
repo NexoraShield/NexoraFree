@@ -71,6 +71,14 @@ try {
         echo "the table of the operations keeps its shape: " . $e->getMessage() . "\n";
     }
     echo "channel_post table ensured.\n";
+    // The products remember the account of the panel that shows the group the
+    // customer has to be created in (the same way the bot does it).
+    try {
+        $pdo->exec("ALTER TABLE product ADD COLUMN protocol_account VARCHAR(200) NULL");
+        echo "the column of the reference account of a product was added.\n";
+    } catch (Throwable $e) {
+        echo "the column of the reference account of a product is already there.\n";
+    }
     if ($added === []) echo "Columns already exist — nothing to do.\n";
     else echo "Added columns: " . implode(', ', $added) . "\n";
     $frenzyDefaults = [
