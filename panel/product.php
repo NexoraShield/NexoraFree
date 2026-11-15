@@ -275,7 +275,6 @@ include __DIR__ . '/inc/layout_head.php';
             <input type="text" name="note_product" class="input" placeholder="<?= htmlspecialchars($textbotlang['panel']['productDescriptionOptional']) ?>">
           </div>
           <div class="field full">
-          <div class="field full">
             <label>نام کاربری یک اکانت داخل همان پنل (برای تنظیم پروتکل و اینباند)</label>
             <input type="text" name="protocol_account" class="input" placeholder="اختیاری — مثلاً نام کاربری یکی از اکانت‌های موجود در پنل">
             <small style="display:block;color:var(--mute);font-size:.72rem;margin-top:5px">اگر پر شود، پروتکل و اینباند پنل با اطلاعات همین اکانت تنظیم می‌شود.</small>
@@ -356,9 +355,6 @@ include __DIR__ . '/inc/layout_head.php';
             <input type="text" name="note_product" id="edit_note" class="input">
           </div>
           <div class="field full">
-            <label>اینباند اختصاصی محصول (اختیاری)</label>
-          </div>
-          <div class="field full">
             <label>نام کاربری یک اکانت داخل همان پنل (برای تنظیم پروتکل و اینباند)</label>
             <input type="text" name="protocol_account" id="edit_protocol" class="input" placeholder="اختیاری — نام کاربری یکی از اکانت‌های موجود در پنل">
             <small style="display:block;color:var(--mute);font-size:.72rem;margin-top:5px">اگر پر شود، پروتکل و اینباند پنل با اطلاعات همین اکانت تنظیم می‌شود.</small>
@@ -373,6 +369,6 @@ include __DIR__ . '/inc/layout_head.php';
   </div>
 </div>
 
-<script src="js/product.js"></script>
+<script src="js/product.js?v=<?= htmlspecialchars((string) (@$version ?? '1')) ?>"></script>
 
 <?php include __DIR__ . '/inc/layout_foot.php'; ?>
