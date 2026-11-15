@@ -1,10 +1,26 @@
 <?php
 require_once __DIR__ . '/inc/config.php';
 require_once __DIR__ . '/inc/icons.php';
+require_once __DIR__ . '/inc/customers.php';
 session_start();
 
 if (!empty($_SESSION['admin_user'])) {
   header('Location: index.php');
+  exit;
+}
+
+// The customer of the site (that the hub connected to this bot) comes with
+// his id and a signature: he goes straight to his own page.
+$siteCustomer = nexora_customer_from_site();
+if ($siteCustomer !== null) {
+  nexora_customer_login_session($siteCustomer);
+  header('Location: customer.php');
+  exit;
+}
+
+// The customer of the site that is already signed in.
+if (nexora_customer_session() !== null) {
+  header('Location: customer.php');
   exit;
 }
 
@@ -52,6 +68,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       header('Location: index.php');
       exit;
     } else {
+      // Maybe it is a customer of the site and not the administrator of the
+      // bot: the customers of the site have their own password.
+      $customer = nexora_customer_login($username, $password);
+      if ($customer !== null) {
+        clear_login_rate($ip);
+        nexora_customer_login_session($customer);
+        flash('success', $textbotlang['panel']['loginWelcomeBack'] . ($customer['username'] ?? ''));
+        header('Location: customer.php');
+        exit;
+      }
       $error = $textbotlang['panel']['loginWrongCredentials'];
       error_log("Failed login for username: $username from IP: $ip");
     }

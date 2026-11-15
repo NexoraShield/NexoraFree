@@ -1,5 +1,14 @@
 # Nexora Bot — Release Notes
 
+## v1.23.05 (2026-11-16) — The customers of the site have their own page in the panel of the bot
+
+- The customers of app.nexorashield.com.tr that are connected to a bot can open the panel of that bot: the page `panel/customer.php` shows the services of the bot and their prices.
+- They come in two ways: from the site of the customers (the site signs the customer, so no password is asked again) or with their own name and password of the site in the login of the panel.
+- The customer only sees the bot that is connected to his account; the panel of the bot never trusts an id that comes from the outside.
+
+---
+
+
 ## v1.23.04 (2026-11-15) — The mark of Nexora turns while the panel loads
 
 - The panel of the bot starts with the mark of Nexora: the shield turns, the light breathes and a thin line of light runs under it. It goes away as soon as the page is ready (the panel of the bot that is opened from the hub comes with this mark until it is loaded).
