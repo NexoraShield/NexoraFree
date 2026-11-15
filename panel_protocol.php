@@ -263,9 +263,11 @@ if (!function_exists('nexora_product_protocol_for_product')) {
      *
      * ['inbounds' => string, 'proxies' => string, 'message' => string, 'ok' => bool]
      */
-    function nexora_product_protocol_for_product(PDO $pdo, string $panelName, string $reference, string $inbounds, string $proxies): array
+    function nexora_product_protocol_for_product(PDO $pdo, string $panelName, string $reference, ?string $inbounds, ?string $proxies): array
     {
         $reference = trim($reference);
+        $inbounds = (string) $inbounds;
+        $proxies = (string) $proxies;
         if ($reference === '') {
             return ['inbounds' => $inbounds, 'proxies' => $proxies, 'message' => '', 'ok' => true];
         }

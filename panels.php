@@ -78,12 +78,18 @@ class ManagePanel
         // account, with the specs of that group - and the group is asked
         // again at every purchase, so it is always the group the account is
         // in at that moment.
-        $__nexoraProtocol = nexora_product_protocol_values($pdo, $Get_Data_Panel, is_array($Get_Data_Product) ? $Get_Data_Product : []);
-        if ($__nexoraProtocol['inbounds'] !== null) {
-            $Get_Data_Product['inbounds'] = json_encode($__nexoraProtocol['inbounds']);
-        }
-        if ($__nexoraProtocol['proxies'] !== null) {
-            $Get_Data_Product['proxies'] = json_encode($__nexoraProtocol['proxies']);
+        //
+        // The test service of the bot is not a product of the panel: it keeps
+        // the inbounds of the panel, exactly as before.
+        $__nexoraIsRealProduct = !in_array($code_product, ["usertest", $textbotlang['users']['customSellVolume']['btnVolume'], "customvolume"], true);
+        if ($__nexoraIsRealProduct) {
+            $__nexoraProtocol = nexora_product_protocol_values($pdo, $Get_Data_Panel, is_array($Get_Data_Product) ? $Get_Data_Product : []);
+            if ($__nexoraProtocol['inbounds'] !== null) {
+                $Get_Data_Product['inbounds'] = json_encode($__nexoraProtocol['inbounds']);
+            }
+            if ($__nexoraProtocol['proxies'] !== null) {
+                $Get_Data_Product['proxies'] = json_encode($__nexoraProtocol['proxies']);
+            }
         }
         // A test service is a normal service: it must be usable right away and
         // must not wait for the first connection of the customer.

@@ -244,21 +244,26 @@ function adduser($location, $data_limit, $username_ac, $timestamp, $note = '', $
     }
     $url = $marzban_list_get['url_panel'] . "/api/user";
     $inbounds = null;
-    $product = false;
     if ($name_product != false and $name_product != "usertest") {
+        // A product of the panel: it may name an account of the panel (the
+        // administrator writes the name of an account that already exists
+        // there). The account of the customer is then created in the group of
+        // that account, with the specs of that group. The group is asked again
+        // at every purchase.
         $stmt = $GLOBALS['pdo']->prepare("SELECT * FROM product WHERE name_product = ? AND (Location = ? OR Location = '/all') ORDER BY Location = '/all' LIMIT 1");
         $stmt->execute([$name_product, $location]);
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-    // The product may name an account of the panel: the account of the customer
-    // is then created in the group of that account, with the specs of that
-    // group. The group is asked again at every purchase.
-    $__nexoraProtocol = nexora_product_protocol_values($GLOBALS['pdo'], $marzban_list_get, is_array($product) ? $product : []);
-    if ($__nexoraProtocol['inbounds'] !== null) {
-        $inbounds = $__nexoraProtocol['inbounds'];
-    }
-    if ($__nexoraProtocol['proxies'] !== null) {
-        $marzban_list_get['proxies'] = json_encode($__nexoraProtocol['proxies']);
+        $__nexoraProtocol = nexora_product_protocol_values($GLOBALS['pdo'], $marzban_list_get, is_array($product) ? $product : []);
+        if ($__nexoraProtocol['inbounds'] !== null) {
+            $inbounds = $__nexoraProtocol['inbounds'];
+        }
+        if ($__nexoraProtocol['proxies'] !== null) {
+            $marzban_list_get['proxies'] = json_encode($__nexoraProtocol['proxies']);
+        }
+    } else {
+        // The test service of the bot: it is not a product of the panel, so it
+        // keeps the inbounds of the panel - exactly as before.
+        $inbounds = json_decode($marzban_list_get['inbounds'], true);
     }
     if ($marzban_list_get['version_panel'] == "1" ? empty($inbounds) : !panelProtocolsConfigured($marzban_list_get['proxies'])) {
         return panelProtocolsMissingError($marzban_list_get['name_panel']);
