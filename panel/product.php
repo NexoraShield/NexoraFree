@@ -59,6 +59,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add')
   exit;
 }
 
+if (($_SERVER['REQUEST_METHOD'] === 'POST') && ($_POST['action'] ?? '') === 'position') {
+  csrf_check_post();
+  $orderId = (int) ($_POST['id'] ?? 0);
+  $orderPosition = (int) ($_POST['position'] ?? 0);
+  if ($orderId > 0 && $orderPosition > 0) {
+    $orderRows = array_map('intval', array_column(db_fetchAll($pdo, "SELECT id FROM product WHERE 1=1" . panel_product_test_filter($pdo) . " ORDER BY display_order, id"), 'id'));
+    move_display_order($pdo, 'product', $orderId, $orderPosition, $orderRows);
+    flash('success', 'ترتیب نمایش محصول تغییر کرد.');
+  }
+  header('Location: product.php');
+  exit;
+}
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit') {
   csrf_check_post();
   $pid = (int) ($_POST['edit_id'] ?? 0);
@@ -88,7 +100,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit'
         [$name, (int) ($_POST['price_product'] ?? 0), (int) ($_POST['volume_product'] ?? 0), (int) ($_POST['time_product'] ?? 0), $panelName, $_POST['agent_product'] ?? '', $_POST['note_product'] ?? '', $_POST['category_product'] ?? '', $protocol['inbounds'] === '' ? null : $protocol['inbounds'], $protocol['proxies'] === '' ? null : $protocol['proxies'], $reference !== '' ? $reference : null, $pid]
       );
       if (isset($_POST['position'])) {
-        move_display_order($pdo, 'product', $pid, (int) $_POST['position']);
+    $orderRows = array_map('intval', array_column(db_fetchAll($pdo, "SELECT id FROM product WHERE 1=1" . panel_product_test_filter($pdo) . " ORDER BY display_order, id"), 'id'));
+    move_display_order($pdo, 'product', $pid, (int) $_POST['position'], $orderRows);
       }
       $pdo->commit();
       flash('success', $textbotlang['panel']['productEdited']);
@@ -175,7 +188,8 @@ include __DIR__ . '/inc/layout_head.php';
             <th>ایموجی</th>
             <th>کد</th>
             <th>عملیات</th>
-          </tr>
+                            <th>ترتیب نمایش</th>
+                </tr>
         </thead>
         <tbody>
           <?php $i = 1;
@@ -193,6 +207,16 @@ include __DIR__ . '/inc/layout_head.php';
                     class="cf">—</span><?php endif; ?></td>
               <td><?= function_exists('nexora_emoji_preview_html') ? (nexora_emoji_preview_html((string) ($p['btn_emoji_id'] ?? '')) ?: '<span class="cf">—</span>') : '<span class="cf">—</span>' ?></td>
               <td class="cm" style="font-size:.72rem"><?= htmlspecialchars($p['code_product'] ?? '') ?></td>
+              <td>
+                <form method="POST" style="display:flex;gap:5px;align-items:center">
+                  <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+                  <input type="hidden" name="action" value="position">
+                  <input type="hidden" name="id" value="<?= (int) $p['id'] ?>">
+                  <input type="number" name="position" class="input" style="width:64px;padding:4px 6px"
+                    min="1" max="<?= count($products) ?>" value="<?= $i ?>">
+                  <button class="btn btn-ghost btn-sm" type="submit">ذخیره</button>
+                </form>
+              </td>
               <td>
                 <div style="display:flex;gap:5px">
                   <button class="btn btn-ghost btn-sm btn-icon" title="<?= htmlspecialchars($textbotlang['panel']['productEditBtn']) ?>"

@@ -40,9 +40,16 @@ function db_count(PDO $pdo, string $sql, array $params = []): int
     return (int) db_query($pdo, $sql, $params)->fetchColumn();
 }
 
-function move_display_order(PDO $pdo, string $table, int $id, int $position): void
+function move_display_order(PDO $pdo, string $table, int $id, int $position, ?array $only = null): void
 {
-    $current = $pdo->query("SELECT id, display_order FROM `$table` ORDER BY display_order, id FOR UPDATE")->fetchAll(PDO::FETCH_KEY_PAIR);
+    // The order is the order of the list that is shown: the ids of that list
+    // are given, so the number the owner writes is the number he sees.
+    $where = '';
+    if (is_array($only) && $only) {
+        $onlyIds = array_map('intval', $only);
+        $where = ' WHERE id IN (' . implode(',', $onlyIds) . ')';
+    }
+    $current = $pdo->query("SELECT id, display_order FROM `$table`$where ORDER BY display_order, id")->fetchAll(PDO::FETCH_KEY_PAIR);
     $ids = array_keys($current);
     $from = array_search($id, $ids, true);
     $to = max(0, min(count($ids) - 1, $position - 1));
@@ -53,7 +60,7 @@ function move_display_order(PDO $pdo, string $table, int $id, int $position): vo
     array_splice($ids, $to, 0, [$id]);
     $stmt = $pdo->prepare("UPDATE `$table` SET display_order = ? WHERE id = ?");
     foreach ($ids as $index => $rowId) {
-        if ((int) $current[$rowId] !== $index + 1) {
+        if ((int) ($current[$rowId] ?? 0) !== $index + 1) {
             $stmt->execute([$index + 1, $rowId]);
         }
     }

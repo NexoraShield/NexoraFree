@@ -1,5 +1,12 @@
 # Nexora Bot — Release Notes
 
+## v1.22.92 (2026-11-15) — The order of the products and of the test services can be written in the list, and the named account stays in its box
+
+- The list of the products and the list of the test services have a column «ترتیب نمایش» now: the number is written in the list and saved from there. The number is the number of the list that is shown (the order of the products and the order of the test services are two different lists).
+- The box of the account the administrator named was always empty when a test service was opened for the edit: the account was never sent to the window. It is there now, and the account stays in its box when the service is saved (an empty field means "it was not changed").
+
+---
+
 ## v1.22.91 (2026-11-15) — The test service of the web panel is made again, and the panel of a product never goes away
 
 **The test service was announced but never made**

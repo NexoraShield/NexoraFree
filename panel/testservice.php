@@ -177,6 +177,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
                     );
                     if (isset($_POST['position'])) {
                         move_display_order($pdo, 'product', $id, (int) $_POST['position']);
+                        $orderRows = array_map('intval', array_column(db_fetchAll($pdo, "SELECT id FROM product WHERE is_test = 1 ORDER BY display_order, id"), 'id'));
+                        move_display_order($pdo, 'product', $id, (int) $_POST['position'], $orderRows);
                     }
                     flash('success', 'سرویس تست بروزرسانی شد.');
                 }
@@ -189,6 +191,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
                 flash('error', 'خطای دیتابیس: ' . $e->getMessage());
             }
         }
+    } elseif ($action === 'position') {
+        csrf_check_post();
+        $orderId = (int) ($_POST['id'] ?? 0);
+        $orderPosition = (int) ($_POST['position'] ?? 0);
+        if ($orderId > 0 && $orderPosition > 0) {
+            $orderRows = array_map('intval', array_column(db_fetchAll($pdo, "SELECT id FROM product WHERE is_test = 1 ORDER BY display_order, id"), 'id'));
+            move_display_order($pdo, 'product', $orderId, $orderPosition, $orderRows);
+            flash('success', 'ترتیب نمایش سرویس تست تغییر کرد.');
+        }
+        header('Location: testservice.php');
+        exit;
     } elseif ($action === 'delete') {
         db_query($pdo, "DELETE FROM product WHERE id = ? AND is_test = 1", [(int) ($_POST['edit_id'] ?? 0)]);
         flash('success', 'سرویس تست حذف شد.');
@@ -313,6 +326,16 @@ $testUsersTotal = (int) db_count($pdo, "SELECT COUNT(*) FROM user");
           <td><?= nexora_emoji_preview_html((string) ($it['btn_emoji_id'] ?? '')) ?: '<span class="cf">—</span>' ?></td>
           <td><?= ($it['status_product'] ?? 'active') === 'active' ? '✅ فعال' : '⛔️ پنهان' ?></td>
           <td><?= (int) ($it['display_order'] ?? 0) ?></td>
+          <td>
+            <form method="POST" style="display:flex;gap:5px;align-items:center">
+              <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+              <input type="hidden" name="action" value="position">
+              <input type="hidden" name="id" value="<?= (int) $it['id'] ?>">
+              <input type="number" name="position" class="input" style="width:64px;padding:4px 6px"
+                min="1" max="<?= count($items) ?>" value="<?= (int) ($it['display_order'] ?? 0) ?>">
+              <button class="btn btn-ghost btn-sm" type="submit">ذخیره</button>
+            </form>
+          </td>
           <td style="white-space:nowrap">
             <button class="btn btn-primary btn-sm" type="button" onclick='openEditTest(<?= json_encode([
                 'id' => (int) $it['id'],
@@ -327,6 +350,7 @@ $testUsersTotal = (int) db_count($pdo, "SELECT COUNT(*) FROM user");
                 'status_product' => (string) ($it['status_product'] ?? 'active'),
                 'position' => (int) ($it['display_order'] ?? 0),
                 'inbounds' => $inbounds,
+                'protocol_account' => (string) ($it['protocol_account'] ?? ''),
             ], JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>✏️ ویرایش</button>
             <form method="POST" style="display:inline">
               <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
