@@ -62,5 +62,5 @@ has been taken out, so nothing of it is published here.
 ### The install is the same as before
 
 ```bash
-curl -sL https://raw.githubusercontent.com/NexoraShield/Nexora/main/nexora-update.sh -o /tmp/nexora-install.sh && sudo bash /tmp/nexora-install.sh
+curl -sL https://raw.githubusercontent.com/NexoraShield/NexoraFree/main/nexora-update.sh -o /tmp/nexora-install.sh && sudo bash /tmp/nexora-install.sh
 ```

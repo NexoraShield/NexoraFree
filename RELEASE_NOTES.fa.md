@@ -46,5 +46,5 @@
 ### نصب مثل قبل است
 
 ```bash
-curl -sL https://raw.githubusercontent.com/NexoraShield/Nexora/main/nexora-update.sh -o /tmp/nexora-install.sh && sudo bash /tmp/nexora-install.sh
+curl -sL https://raw.githubusercontent.com/NexoraShield/NexoraFree/main/nexora-update.sh -o /tmp/nexora-install.sh && sudo bash /tmp/nexora-install.sh
 ```

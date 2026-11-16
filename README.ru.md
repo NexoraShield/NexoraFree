@@ -34,14 +34,14 @@
 ## 🚀 Установка одной командой
 
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/NexoraShield/Nexora/main/nexora-update.sh)
+bash <(curl -s https://raw.githubusercontent.com/NexoraShield/NexoraFree/main/nexora-update.sh)
 ```
 
 ## 📦 Ручная установка
 
 1. Клонировать репозиторий:
 ```bash
-git clone https://github.com/NexoraShield/Nexora.git
+git clone https://github.com/NexoraShield/NexoraFree.git
 cd Nexora
 ```
 

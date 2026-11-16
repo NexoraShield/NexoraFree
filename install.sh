@@ -98,10 +98,10 @@ if [[ ! -f "$MANIFEST" ]]; then
   # auto-installer used to end the one-liner without any message at all.
   trap 'rc=$?; rm -f "$TMP_UPDATE"; if [[ $rc -ne 0 ]]; then { echo ""; echo "!!! Update failed (exit $rc). Last lines of /tmp/nexora_install.log:"; tail -25 /tmp/nexora_install.log 2>/dev/null; } >&3; fi; exit $rc' EXIT
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "https://raw.githubusercontent.com/NexoraShield/Nexora/main/nexora-update.sh" -o "$TMP_UPDATE" \
+    curl -fsSL "https://raw.githubusercontent.com/NexoraShield/NexoraFree/main/nexora-update.sh" -o "$TMP_UPDATE" \
       || { echo "!!! Could not download the auto-installer from GitHub." >&3; exit 1; }
   else
-    wget -qO "$TMP_UPDATE" "https://raw.githubusercontent.com/NexoraShield/Nexora/main/nexora-update.sh" \
+    wget -qO "$TMP_UPDATE" "https://raw.githubusercontent.com/NexoraShield/NexoraFree/main/nexora-update.sh" \
       || { echo "!!! Could not download the auto-installer from GitHub." >&3; exit 1; }
   fi
   chmod +x "$TMP_UPDATE"

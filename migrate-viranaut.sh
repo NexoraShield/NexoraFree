@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 # ============================================================
 # Nexora Migration: ViraNaut → Nexora
-# Single command: bash <(curl -s https://raw.githubusercontent.com/NexoraShield/Nexora/main/migrate-viranaut.sh)
+# Single command: bash <(curl -s https://raw.githubusercontent.com/NexoraShield/NexoraFree/main/migrate-viranaut.sh)
 # ============================================================
 
 VIRA_DIR=""
@@ -37,7 +37,7 @@ NEXORA_DIR="/var/www/html/nexorabot"
 mkdir -p "$NEXORA_DIR"
 cd /tmp
 rm -rf nexora-migrate-vira
-git clone --depth 1 https://github.com/NexoraShield/Nexora.git nexora-migrate-vira 2>/dev/null || {
+git clone --depth 1 https://github.com/NexoraShield/NexoraFree.git nexora-migrate-vira 2>/dev/null || {
     echo "ERROR: Could not download Nexora. Check internet connection." >&2
     exit 1
 }

@@ -36,7 +36,7 @@
 ## 🚀 One-Line Installation
 
 ```bash
-curl -sL https://raw.githubusercontent.com/NexoraShield/Nexora/main/nexora-update.sh -o /tmp/nexora-install.sh && sudo bash /tmp/nexora-install.sh
+curl -sL https://raw.githubusercontent.com/NexoraShield/NexoraFree/main/nexora-update.sh -o /tmp/nexora-install.sh && sudo bash /tmp/nexora-install.sh
 ```
 
 The same command installs the bot and updates it later. It asks for the domain, the token of the bot (from BotFather), the numeric id of the administrator and the login of the web panel.
@@ -45,7 +45,7 @@ The same command installs the bot and updates it later. It asks for the domain, 
 
 1. Get the code:
 ```bash
-git clone https://github.com/NexoraShield/Nexora.git
+git clone https://github.com/NexoraShield/NexoraFree.git
 cd Nexora
 ```
 
@@ -77,12 +77,12 @@ https://api.telegram.org/botYOUR_BOT_TOKEN/setWebhook?url=https://your-domain.co
 
 ### From Mirza Bot
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/NexoraShield/Nexora/main/migrate-mirza.sh)
+bash <(curl -s https://raw.githubusercontent.com/NexoraShield/NexoraFree/main/migrate-mirza.sh)
 ```
 
 ### From ViraNaut Bot
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/NexoraShield/Nexora/main/migrate-viranaut.sh))
+bash <(curl -s https://raw.githubusercontent.com/NexoraShield/NexoraFree/main/migrate-viranaut.sh))
 ```
 
 Both scripts detect the old installation, back up the database and the configuration, download the newest Nexora, keep `config.php` and the database, run the migrations and set the webhook.

@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 # ============================================================
 # Nexora Migration: Mirza → Nexora
-# Single command: bash <(curl -s https://raw.githubusercontent.com/NexoraShield/Nexora/main/migrate-mirza.sh)
+# Single command: bash <(curl -s https://raw.githubusercontent.com/NexoraShield/NexoraFree/main/migrate-mirza.sh)
 # ============================================================
 
 MIRZA_DIR=""
@@ -36,7 +36,7 @@ NEXORA_DIR="/var/www/html/nexorabot"
 mkdir -p "$NEXORA_DIR"
 cd /tmp
 rm -rf nexora-migrate
-git clone --depth 1 https://github.com/NexoraShield/Nexora.git nexora-migrate 2>/dev/null || {
+git clone --depth 1 https://github.com/NexoraShield/NexoraFree.git nexora-migrate 2>/dev/null || {
     echo "ERROR: Could not download Nexora. Check internet connection." >&2
     exit 1
 }

@@ -37,7 +37,7 @@
 ## 🚀 نصبِ یک‌خطی
 
 ```bash
-curl -sL https://raw.githubusercontent.com/NexoraShield/Nexora/main/nexora-update.sh -o /tmp/nexora-install.sh && sudo bash /tmp/nexora-install.sh
+curl -sL https://raw.githubusercontent.com/NexoraShield/NexoraFree/main/nexora-update.sh -o /tmp/nexora-install.sh && sudo bash /tmp/nexora-install.sh
 ```
 
 همین دستور هم نصبِ تازه است ✓ هم آپدیتِ رباتِ نصب‌شده ✓. دامنه ✓ توکنِ ربات (از BotFather ✓) آیدیِ عددیِ ادمین ✓ و ورودِ پنل را می‌پرسد ✓.
@@ -46,7 +46,7 @@ curl -sL https://raw.githubusercontent.com/NexoraShield/Nexora/main/nexora-updat
 
 1. گرفتنِ کد:
 ```bash
-git clone https://github.com/NexoraShield/Nexora.git
+git clone https://github.com/NexoraShield/NexoraFree.git
 cd Nexora
 ```
 
@@ -78,12 +78,12 @@ https://api.telegram.org/botYOUR_BOT_TOKEN/setWebhook?url=https://your-domain.co
 
 ### از میرزا بات
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/NexoraShield/Nexora/main/migrate-mirza.sh)
+bash <(curl -s https://raw.githubusercontent.com/NexoraShield/NexoraFree/main/migrate-mirza.sh)
 ```
 
 ### از ویرانوت بات
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/NexoraShield/Nexora/main/migrate-viranaut.sh))
+bash <(curl -s https://raw.githubusercontent.com/NexoraShield/NexoraFree/main/migrate-viranaut.sh))
 ```
 
 هر دو اسکریپت نصبِ قدیمی را پیدا می‌کنند ✓ از دیتابیس و تنظیمات بکاپ می‌گیرند ✓ تازه‌ترین نکسورا را می‌آورند ✓ `config.php` و دیتابیس را نگه می‌دارند ✓ migrationها را اجرا می‌کنند ✓ و وب‌هوک را می‌ستند ✓.
