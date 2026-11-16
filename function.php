@@ -3611,31 +3611,17 @@ function stripCustomEmojiTags($value)
 // must not be dropped (that is how a premium emoji "disappeared").
 function splitCustomEmojiLabel($value, $keepFallback = false)
 {
+    // The free version has no premium emoji of telegram: the label is always
+    // plain text and the icon of a button is always empty.
     $text = is_string($value) ? $value : '';
     if ($text === '' || stripos($text, '<tg-emoji') === false) {
         return ['text' => $text, 'icon' => ''];
     }
-    $icon = '';
-    $stripped = preg_replace_callback(
-        '#<tg-emoji\b[^>]*\bemoji-id\s*=\s*"(\d+)"[^>]*>(.*?)</tg-emoji>#isu',
-        function ($match) use (&$icon, $keepFallback) {
-            if ($icon === '') {
-                $icon = $match[1];
-                return $keepFallback ? $match[2] : '';
-            }
-            return $match[2];
-        },
-        $text
-    );
-    $fallback = stripCustomEmojiTags($text);
-    if (!is_string($stripped)) {
-        return ['text' => $fallback, 'icon' => ''];
+    $plain = trim(preg_replace('/[ \t]+/u', ' ', stripCustomEmojiTags($text)));
+    if (!is_string($plain) || $plain === '') {
+        return ['text' => stripCustomEmojiTags($text), 'icon' => ''];
     }
-    $stripped = trim(preg_replace('/[ \t]+/u', ' ', stripCustomEmojiTags($stripped)));
-    if ($stripped === '') {
-        return ['text' => $fallback, 'icon' => ''];
-    }
-    return ['text' => $stripped, 'icon' => $icon];
+    return ['text' => $plain, 'icon' => ''];
 }
 // Every plain text form a label can be pressed with. A customer can send the
 // button text, the text with the fallback character or the text that was

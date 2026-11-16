@@ -103,12 +103,8 @@ if (!function_exists('nexora_ensure_style_columns')) {
 if (!function_exists('nexora_ensure_emoji_table')) {
     function nexora_ensure_emoji_table($pdo = null): void
     {
-        $pdo = $pdo instanceof PDO ? $pdo : ($GLOBALS['pdo'] ?? null);
-        if (!($pdo instanceof PDO)) return;
-        try {
-            $pdo->exec('CREATE TABLE IF NOT EXISTS bot_custom_emoji (id INT UNSIGNED NOT NULL AUTO_INCREMENT, emoji_name VARCHAR(120) NOT NULL, emoji_slug VARCHAR(64) DEFAULT NULL, custom_emoji_id VARCHAR(32) NOT NULL, emoji_utf8 VARCHAR(16) DEFAULT NULL, created_at INT UNSIGNED NOT NULL DEFAULT 0, created_by VARCHAR(32) DEFAULT NULL, PRIMARY KEY (id), UNIQUE KEY uq_custom_emoji_id (custom_emoji_id), UNIQUE KEY uq_emoji_slug (emoji_slug), KEY idx_emoji_name (emoji_name)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
-            $pdo->exec('CREATE TABLE IF NOT EXISTS nexora_emoji_map (target_type VARCHAR(32) NOT NULL, target_name VARCHAR(190) NOT NULL, emoji_id VARCHAR(32) NOT NULL, PRIMARY KEY (target_type, target_name)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
-        } catch (Throwable $e) { error_log('nexora_ensure_emoji_table: ' . $e->getMessage()); }
+        // The free version has no library of the premium emoji: no table is
+        // needed.
     }
 }
 
@@ -148,33 +144,7 @@ if (!function_exists('nexora_emoji_list')) {
 if (!function_exists('nexora_emoji_lookup')) {
     function nexora_emoji_lookup(string $ref, $pdo = null): ?array
     {
-        $ref = trim($ref);
-        if ($ref === '') return null;
-        // The code of an emoji ({emoji:slug}) points at the emoji itself: it is
-        // unwrapped here, so every caller finds the emoji no matter if it
-        // passes the code or the name.
-        if (preg_match('/^\{emoji:([^}]+)\}$/u', $ref, $m)) {
-            $ref = trim($m[1]);
-            if ($ref === '') return null;
-        }
-        try { $list = nexora_emoji_list($pdo); } catch (Throwable $e) { return null; }
-        if ($list === []) return null;
-        if (preg_match('/^#?(\d+)$/', $ref, $num)) {
-            foreach ($list as $row) {
-                if ((int) ($row['id'] ?? 0) === (int) $num[1]) return $row;
-                if (trim((string) ($row['custom_emoji_id'] ?? '')) === $num[1]) return $row;
-            }
-            return null;
-        }
-        $lower = function_exists('mb_strtolower') ? mb_strtolower($ref, 'UTF-8') : strtolower($ref);
-        foreach ($list as $row) {
-            $slug = function_exists('mb_strtolower') ? mb_strtolower(trim((string) ($row['emoji_slug'] ?? '')), 'UTF-8') : strtolower(trim((string) ($row['emoji_slug'] ?? '')));
-            if ($slug !== '' && $slug === $lower) return $row;
-        }
-        foreach ($list as $row) {
-            $name = function_exists('mb_strtolower') ? mb_strtolower(trim((string) ($row['emoji_name'] ?? '')), 'UTF-8') : strtolower(trim((string) ($row['emoji_name'] ?? '')));
-            if ($name !== '' && $name === $lower) return $row;
-        }
+        // The free version has no library of the premium emoji.
         return null;
     }
 }
@@ -197,23 +167,8 @@ if (!function_exists('nexora_emoji_image_url')) {
      */
     function nexora_emoji_image_url($ref): string
     {
-        $ref = trim((string) $ref);
-        if ($ref === '') {
-            return '';
-        }
-        $id = '';
-        if (preg_match('/^\d{1,32}$/', $ref)) {
-            $id = $ref;
-        } else {
-            $row = nexora_emoji_lookup($ref);
-            if ($row && !empty($row['custom_emoji_id'])) {
-                $id = (string) $row['custom_emoji_id'];
-            }
-        }
-        if ($id === '' || !preg_match('/^\d{1,32}$/', $id)) {
-            return '';
-        }
-        return 'https://t.me/i/emoji/' . $id . '.webp';
+        // The free version never draws the premium emoji.
+        return '';
     }
 }
 
@@ -229,35 +184,12 @@ if (!function_exists('nexora_emoji_text_to_html')) {
         if ($text === '') {
             return '';
         }
-        // The name of a product can carry the code of a premium emoji
-        // ("{emoji:slug}"). The bot turns that code into the tag of the emoji
-        // of the bot, so the panel does the same before it draws the picture
-        // of the emoji: the owner sees the name he gave and not the code.
-        if (strpos($text, '{emoji:') !== false && function_exists('nexora_render_text_emoji')) {
-            $rendered = nexora_render_text_emoji($text);
-            if (is_string($rendered) && $rendered !== '') {
-                $text = $rendered;
-            }
-        }
-        if (stripos($text, '<tg-emoji') === false) {
-            return htmlspecialchars($text);
-        }
-        $result = '';
-        $offset = 0;
-        $pattern = '#<tg-emoji\b[^>]*\bemoji-id\s*=\s*"(\d+)"[^>]*>(.*?)</tg-emoji>#isu';
-        while (preg_match($pattern, $text, $m, PREG_OFFSET_CAPTURE, $offset)) {
-            $start = $m[0][1];
-            $result .= htmlspecialchars(substr($text, $offset, $start - $offset));
-            $id = $m[1][0];
-            $fallback = trim(strip_tags((string) $m[2][0]));
-            $url = 'https://t.me/i/emoji/' . $id . '.webp';
-            $result .= '<img class="nx-emoji" src="' . htmlspecialchars($url) . '"'
-                . ' alt="' . htmlspecialchars($fallback) . '"'
-                . ' title="' . htmlspecialchars($fallback) . '" loading="lazy">';
-            $offset = $start + strlen((string) $m[0][0]);
-        }
-        $result .= htmlspecialchars(substr($text, $offset));
-        return $result;
+        // The free version shows the plain text: the premium emoji is not
+        // drawn as a picture.
+        $plain = function_exists('stripCustomEmojiTags')
+            ? stripCustomEmojiTags($text)
+            : $text;
+        return htmlspecialchars($plain);
     }
 }
 
@@ -269,11 +201,8 @@ if (!function_exists('nexora_emoji_preview_html')) {    /**
      */
     function nexora_emoji_preview_html($ref, string $class = 'nx-emoji'): string
     {
-        $url = nexora_emoji_image_url($ref);
-        if ($url === '') {
-            return '';
-        }
-        return '<img class="' . htmlspecialchars($class) . '" src="' . htmlspecialchars($url) . '" alt="" loading="lazy">';
+        // The free version has no picture of a premium emoji.
+        return '';
     }
 }
 
@@ -375,14 +304,7 @@ if (!function_exists('nexora_resolve_btn_label')) {
 if (!function_exists('nexora_resolve_btn_emoji_field')) {
     function nexora_resolve_btn_emoji_field($raw): string
     {
-        $raw = trim((string) $raw);
-        if ($raw === '') return '';
-        if (preg_match('/^\d{1,32}$/', $raw)) return $raw;
-        if (preg_match('/emoji-id\s*=\s*"(\d{1,32})"/i', $raw, $m)) return $m[1];
-        if (preg_match('/^\{emoji:([^}]+)\}$/u', $raw, $m)) {
-            try { $row = nexora_emoji_lookup(trim($m[1])); } catch (Throwable $e) { return ''; }
-            if ($row && !empty($row['custom_emoji_id'])) return (string) $row['custom_emoji_id'];
-        }
+        // The free version has no premium emoji: the field is always empty.
         return '';
     }
 }
@@ -390,16 +312,12 @@ if (!function_exists('nexora_resolve_btn_emoji_field')) {
 if (!function_exists('nexora_render_text_emoji')) {
     function nexora_render_text_emoji(string $text): string
     {
+        // The free version has no premium emoji of telegram: the code of an
+        // emoji is taken out of the text and nothing else is changed.
         try {
             if (strpos($text, '{emoji:') === false) return $text;
-            return (string) preg_replace_callback('/\{emoji:([^}]+)\}/u', function ($m) {
-                try { $row = nexora_emoji_lookup(trim($m[1])); } catch (Throwable $e) { return ''; }
-                if (!$row || empty($row['custom_emoji_id'])) return '';
-                $id = (string) $row['custom_emoji_id'];
-                $fb = trim((string) ($row['emoji_utf8'] ?? ''));
-                if ($fb === '') $fb = '•';
-                return '<tg-emoji emoji-id="' . $id . '">' . $fb . '</tg-emoji>';
-            }, $text);
+            $out = preg_replace('/\{emoji:[^}]+\}/u', '', $text);
+            return trim(preg_replace('/\s{2,}/u', ' ', (string) $out));
         } catch (Throwable $e) { return $text; }
     }
 }
@@ -485,12 +403,9 @@ if (!function_exists('nexora_style_btn')) {
             $resolved = nexora_resolve_btn_label((string) $text);
             $label = $resolved['text'] !== '' ? $resolved['text'] : (string) $text;
             $btn = ['text' => $label, 'callback_data' => (string) $callback_data];
-            if ($resolved['icon'] !== '') {
-                $btn['icon_custom_emoji_id'] = $resolved['icon'];
-            } else {
-                $emoji = nexora_resolve_btn_emoji_field($row['btn_emoji_id'] ?? '');
-                if ($emoji !== '') $btn['icon_custom_emoji_id'] = $emoji;
-            }
+            // The free version has no premium emoji: a button never gets an
+            // icon.
+            unset($btn['icon_custom_emoji_id']);
             $style = nexora_btn_style($row['btn_style'] ?? '');
             if ($style !== '') $btn['style'] = $style;
             return $btn;
@@ -526,6 +441,9 @@ if (!function_exists('nexora_menu_emoji_map')) {
 if (!function_exists('nexora_apply_menu_emoji')) {
     function nexora_apply_menu_emoji(array $rows, array $labels = []): array
     {
+        // The free version has no premium emoji of telegram: the buttons keep
+        // the text they have.
+        return $rows;
         try {
             $flip = [];
             foreach ($labels as $k => $v) {
@@ -679,18 +597,8 @@ if (!function_exists('nexora_apply_bb_style')) {
                         if ($styleKey === null && isset($map['style'][$candidate])) $styleKey = $candidate;
                     }
                     $changed = false;
-                    if ($emojiKey !== null) {
-                        $ref = $map['emoji'][$emojiKey];
-                        $icon = '';
-                        if (preg_match('/^\d{1,32}$/', $ref)) $icon = $ref;
-                        elseif (preg_match('/^\{emoji:([^}]+)\}$/', $ref, $m)) {
-                            try { $erow = nexora_emoji_lookup(trim($m[1])); } catch (Throwable $e) { $erow = null; }
-                            if ($erow && !empty($erow['custom_emoji_id'])) $icon = (string) $erow['custom_emoji_id'];
-                        }
-                        if ($icon !== '' && !isset($btn['icon_custom_emoji_id'])) {
-                            $btn['icon_custom_emoji_id'] = $icon; $changed = true;
-                        }
-                    }
+                    // The free version has no premium emoji of telegram: the
+                    // colour of a button is set, the icon never.
                     if ($styleKey !== null) {
                         $native = nexora_btn_style($map['style'][$styleKey]);
                         // A colour that was chosen in the web panel always wins:

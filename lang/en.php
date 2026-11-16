@@ -18,7 +18,7 @@ Current language: <b>{lang}</b>',
                 'msg_emoji_unsupported' => '⚠️ Premium emoji cannot be displayed by this bot.
 The text was saved, but a regular emoji is shown instead of the premium one.
 To enable it, the bot owner needs a Telegram Premium subscription, or the bot must own a username purchased on Fragment.',
-                'msg_emoji_hint' => '💎 You can send a premium emoji together with the text; it is shown exactly the way you send it.',
+                'msg_emoji_hint' => 'The free version does not support the premium emoji of telegram: only the normal emoji are used.',
                 'msg_closed' => 'Closed.',
                 'langs' => [
                         'fa' => '🇮🇷 فارسی',

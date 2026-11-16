@@ -1,69 +1,129 @@
 #!/usr/bin/env bash
+# ---------------------------------------------------------------------------
+# Removes the bot of the free version of Nexora from the server.
+#
+#   sudo bash uninstall.sh [directory] [--purge]
+#
+# The files of the bot, its cron dispatcher and the vhost of nginx are
+# removed. The database of the bot stays, so the bot can be installed again
+# with the same data. With --purge the database is dropped as well.
+#
+# Nothing of the hub and nothing of the other bots of the server is touched.
+# ---------------------------------------------------------------------------
 set -Eeuo pipefail
-REMOVE_DB=0
+
+PURGE=0
 TARGET=""
-usage() { cat <<'USAGE'
-Usage: sudo bash uninstall.sh [nexoraBOT_DIRECTORY] [--db]
+PHP_BIN="$(command -v php || true)"
+
+usage() {
+  cat <<'USAGE'
+Usage: sudo bash uninstall.sh [nexoraBOT_DIRECTORY] [--purge]
+
+  --purge   The database of the bot is dropped as well.
 USAGE
 }
+
 for arg in "$@"; do
   case "$arg" in
-    --db) REMOVE_DB=1 ;;
+    --purge) PURGE=1 ;;
     -h|--help) usage; exit 0 ;;
     -*)
       echo "Unknown option: $arg" >&2; usage; exit 2 ;;
     *)
-      if [[ -n "$TARGET" ]]; then echo "Only one nexorabot directory." >&2; exit 2; fi
+      if [[ -n "$TARGET" ]]; then
+        echo "Only one directory." >&2
+        exit 2
+      fi
       TARGET="$arg" ;;
   esac
 done
+
+# The directory of the bot is searched, when it is not given.
 if [[ -z "$TARGET" ]]; then
-  for candidate in /var/www/html/nexorabot /var/www/html/nexorabotconfig /var/www/nexorabot /var/www/html/bot /var/www/html/nexorabotconfig; do
-    if [[ -f "$candidate/function.php" && -f "$candidate/index.php" && -f "$candidate/config.php" && -f "$candidate/keyboard.php" && -f "$candidate/botapi.php" ]]; then TARGET="$candidate"; break; fi
+  for candidate in /var/www/html/nexorabot /var/www/html/nexorabotconfig /var/www/nexorabot \
+                  /var/www/html/bot /var/www/html/* /var/www/* /srv/http/* /opt/*; do
+    if [[ -f "$candidate/function.php" && -f "$candidate/index.php" && -f "$candidate/config.php" ]]; then
+      TARGET="$candidate"
+      break
+    fi
   done
 fi
-if [[ -z "$TARGET" ]]; then echo "nexorabot not found. Pass its directory." >&2; usage; exit 1; fi
-TARGET="$(cd -- "$TARGET" 2>/dev/null && pwd)" || { echo "Target directory does not exist: $TARGET" >&2; exit 1; }
-echo "==> Uninstall from $TARGET"
-backup_root="${nexoraBOT_BACKUP_DIR:-/var/backups/nexorabot}"
-BACKUP_DIR=""
-if [[ -d "$backup_root" ]]; then BACKUP_DIR="$(ls -td "$backup_root"/nexorastyle-* 2>/dev/null | head -1 || true)"; fi
-if [[ -n "$BACKUP_DIR" && -d "$BACKUP_DIR" ]]; then
-  echo "==> Restoring from backup: $BACKUP_DIR"
-  for f in keyboard.php panel/inc/layout_head.php botapi.php panel/bottext.php admin.php app/index.php; do
-    if [[ -f "$BACKUP_DIR/$f" ]]; then cp -a -- "$BACKUP_DIR/$f" "$TARGET/$f"; echo "    restored $f"; fi
+
+if [[ -z "$TARGET" || ! -d "$TARGET" ]]; then
+  echo "The directory of the bot was not found. Pass it as an argument." >&2
+  usage
+  exit 1
+fi
+
+TARGET="$(cd -- "$TARGET" 2>/dev/null && pwd)"
+echo "==> Removing the bot from $TARGET"
+
+# ---- the cron dispatcher --------------------------------------------------
+# The lines of the crontab that point at this installation are taken out.
+if command -v crontab >/dev/null 2>&1; then
+  for _user in root www-data; do
+    id -u "$_user" >/dev/null 2>&1 || continue
+    _cron="$(crontab -u "$_user" -l 2>/dev/null || true)"
+    if [[ -n "$_cron" ]] && printf '%s' "$_cron" | grep -qF "$TARGET"; then
+      printf '%s' "$_cron" | grep -vF "$TARGET" | crontab -u "$_user" - || true
+      echo "    the cron dispatcher of $_user was removed"
+    fi
   done
-  for _rb in lang/fa.php lang/en.php lang/ru.php lang/zh.php install/checks.php install/index.php api/index.html composer.json; do
-    if [[ -f "$BACKUP_DIR/$_rb" ]]; then cp -a -- "$BACKUP_DIR/$_rb" "$TARGET/$_rb"; echo "    restored $_rb"; fi
+fi
+
+# ---- the vhost of nginx ---------------------------------------------------
+if [[ -d /etc/nginx/sites-enabled ]]; then
+  for _vhost in /etc/nginx/sites-enabled/*; do
+    [[ -e "$_vhost" ]] || continue
+    if grep -qF "$TARGET" "$_vhost" 2>/dev/null; then
+      rm -f -- "$_vhost"
+      echo "    the vhost of nginx was removed: $(basename "$_vhost")"
+    fi
   done
+  if command -v nginx >/dev/null 2>&1; then
+    nginx -t >/dev/null 2>&1 && systemctl reload nginx 2>/dev/null && echo "    nginx was reloaded" || true
+  fi
+fi
+
+# ---- the files of the bot -------------------------------------------------
+# The configuration is kept once, so a new installation can be made with the
+# same token and the same database.
+_keep="/var/backups/nexorabot"
+if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+  mkdir -p "$_keep"
+  chmod 700 "$_keep" 2>/dev/null || true
+  if [[ -f "$TARGET/config.php" ]]; then
+    cp -a -- "$TARGET/config.php" "$_keep/config.php.last" 2>/dev/null || true
+    echo "    the configuration was saved in $_keep/config.php.last"
+  fi
+fi
+
+rm -rf -- "$TARGET"
+echo "    the files of the bot were removed"
+
+# ---- the database ---------------------------------------------------------
+if [[ "$PURGE" -eq 1 ]]; then
+  echo "==> Removing the database of the bot"
+  if [[ -z "$PHP_BIN" ]]; then
+    echo "PHP CLI is required for --purge." >&2
+    exit 1
+  fi
+  if [[ -f "$_keep/config.php.last" ]]; then
+    "$PHP_BIN" -r '
+      $t = $argv[1];
+      require $t;
+      if (!isset($dbname) || $dbname === "") { fwrite(STDERR, "The database is not written in the configuration.\n"); exit(1); }
+      if (!isset($pdo) || !($pdo instanceof PDO)) { fwrite(STDERR, "No connection to the database.\n"); exit(1); }
+      $pdo->exec("DROP DATABASE IF EXISTS `" . str_replace("`", "", $dbname) . "`");
+      echo "    the database " . $dbname . " was dropped\n";
+    ' "$_keep/config.php.last" || echo "    WARNING: the database was not dropped"
+  else
+    echo "    WARNING: the configuration of the bot is not there - the database was kept"
+  fi
 else
-  echo "    No backup dir found under $backup_root — skipping restore."
+  echo "    the database of the bot was kept (use --purge to drop it)"
 fi
-echo "==> Removing added files"
-  if [[ -e "$TARGET/$f" ]]; then rm -f -- "$TARGET/$f"; echo "    removed $f"; fi
-done
-if [[ "$REMOVE_DB" -eq 1 ]]; then
-  echo "==> Removing database columns/table"
-  if ! command -v php >/dev/null 2>&1; then echo "PHP CLI is required for --db." >&2; exit 1; fi
-  php -r '
-    $t = $argv[1];
-    require $t . "/config.php";
-    if (!isset($pdo) || !($pdo instanceof PDO)) { fwrite(STDERR, "No DB connection.\n"); exit(1); }
-    foreach (["product", "category", "marzban_panel"] as $table) {
-      foreach (["btn_style", "btn_emoji_id"] as $col) {
-        $st = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?");
-        $st->execute([$table, $col]);
-        if ((int) $st->fetchColumn() > 0) { $pdo->exec("ALTER TABLE `{$table}` DROP COLUMN `{$col}`"); echo "    dropped {$table}.{$col}\n"; }
-      }
-    }
-    $pdo->exec("DROP TABLE IF EXISTS bot_custom_emoji");
-    echo "    dropped bot_custom_emoji (if existed)\n";
-    $pdo->exec("DROP TABLE IF EXISTS agent_auth");
-    echo "    dropped agent_auth (if existed)\n";
-  ' "$TARGET"
-else
-  echo "    Database kept (pass --db to also drop added columns/table)."
-fi
-if command -v restorecon >/dev/null 2>&1; then restorecon -R "$TARGET" >/dev/null 2>&1 || true; fi
+
 echo
-echo "Uninstall complete. The bot and panel are back to stock nexorabot."
+echo "Uninstall complete."

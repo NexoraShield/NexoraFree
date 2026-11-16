@@ -24,15 +24,8 @@ $overrideFile = dirname(__DIR__) . '/lang/override/' . $lang . '.php';
 $overrideTexts = is_file($overrideFile) ? include $overrideFile : [];
 $overrides = array_intersect_key($flatTexts(is_array($overrideTexts) ? $overrideTexts : []), $defaults);
 
-// Premium emoji support for bot text editing
-require_once __DIR__ . '/../nexora_style.php';
-nexora_ensure_emoji_table();
+// The free version has no library of the premium emoji of telegram.
 $botEmojis = [];
-$emojiStmt = $pdo->query("SELECT emoji_name, emoji_slug, custom_emoji_id, emoji_utf8 FROM bot_custom_emoji ORDER BY emoji_name");
-while ($er = $emojiStmt->fetch(PDO::FETCH_ASSOC)) {
-    $botEmojis[] = $er;
-}
-$emojiJson = json_encode($botEmojis, JSON_UNESCAPED_UNICODE);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check_post();
@@ -40,6 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!isset($defaults[$key]) || !is_string($value))
             continue;
         $value = str_replace("\r\n", "\n", $value);
+        // The free version has no premium emoji: the tags are never saved.
+        $value = function_exists('stripCustomEmojiTags')
+            ? stripCustomEmojiTags($value)
+            : $value;
         if (trim($value) === '' || $value === $defaults[$key])
             unset($overrides[$key]);
         else
@@ -131,28 +128,6 @@ include __DIR__ . '/inc/layout_head.php';
         </form>
     </div>
 
-    <div style="margin-bottom:12px">
-        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('emojiPickerPanel').style.display='block'">🎭 درج ایموجی پریمیوم</button>
-    </div>
-
-    <div id="emojiPickerPanel" style="display:none;margin-bottom:16px;background:var(--card,#fff);border:1px solid var(--border,#ddd);border-radius:10px;padding:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <strong>🎭 انتخاب ایموجی پریمیوم (کلیک کنید تا در متن فعال درج شود)</strong>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('emojiPickerPanel').style.display='none'">✕</button>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;max-height:180px;overflow-y:auto">
-            <?php foreach ($botEmojis as $em): ?>
-                <?php $slug = $em['emoji_slug'] ?: $em['emoji_name']; ?>
-                <button type="button" class="btn btn-ghost btn-sm" onclick="insertEmoji('<?= htmlspecialchars($slug, ENT_QUOTES) ?>')" title="<?= htmlspecialchars($em['emoji_name']) ?>">
-                    <?= htmlspecialchars($em['emoji_utf8'] ?: $em['emoji_name']) ?>
-                </button>
-            <?php endforeach; ?>
-            <?php if (empty($botEmojis)): ?>
-                <p style="color:var(--mute);font-size:.85rem">هیچ ایموجی تعریف نشده. ابتدا در تب 🎭 انتخاب‌گر ایموجی، ایموجی اضافه کنید.</p>
-            <?php endif; ?>
-        </div>
-    </div>
-
     <?php if (!$visible): ?>
         <div class="empty" style="padding:60px 20px">
             <p><?= $textbotlang['panel']['bottextEmpty'] ?></p>
@@ -179,31 +154,11 @@ include __DIR__ . '/inc/layout_head.php';
                             </div>
                         <?php endif; ?>
 <script>
-const BOT_EMOJIS = <?= $emojiJson ?: '[]' ?>;
-const EMOJI_MAP = {};
-BOT_EMOJIS.forEach(e => { EMOJI_MAP['{emoji:' + (e.emoji_slug || e.emoji_name) + '}'] = e.emoji_utf8 || e.emoji_name || ''; });
-
-function resolveEmojis(text) {
-    return text.replace(/\{emoji:([^}]+)\}/g, (m, slug) => EMOJI_MAP['{emoji:' + slug.trim() + '}'] || m);
-}
-
+// The free version has no premium emoji: the preview is the plain text.
 function updatePreview(ta) {
     const key = ta.dataset.key;
     const preview = document.querySelector('.bottext-preview[data-key="' + key + '"]');
-    if (preview) preview.textContent = resolveEmojis(ta.value);
-}
-
-function insertEmoji(slug) {
-    const active = document.querySelector('textarea.bottext-area:focus') || document.querySelector('textarea.bottext-area');
-    if (!active) return;
-    const start = active.selectionStart;
-    const end = active.selectionEnd;
-    const val = active.value;
-    const insert = '{emoji:' + slug + '}';
-    active.value = val.substring(0, start) + insert + val.substring(end);
-    active.selectionStart = active.selectionEnd = start + insert.length;
-    active.focus();
-    updatePreview(active);
+    if (preview) preview.textContent = ta.value;
 }
 
 // Live preview on input

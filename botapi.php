@@ -53,22 +53,12 @@ function walkKeyboardButtons($replyMarkup, callable $handler)
 function applyCustomEmojiToMarkup($replyMarkup)
 {
     // The free version does not use the premium emoji of telegram: the emoji
-    // of a button is always a normal one.
-    return $replyMarkup;
+    // of a button is always a normal one and a button never gets an icon.
     return walkKeyboardButtons($replyMarkup, function ($button, $markupKey = 'inline_keyboard') {
-        // An inline keyboard button can show the premium emoji as an icon, so
-        // the fallback character is removed from the text (otherwise the emoji
-        // would be shown twice). A reply keyboard has no icon field, there the
-        // fallback character has to stay - otherwise the emoji is lost.
-        $keepFallback = ($markupKey !== 'inline_keyboard');
-        $label = splitCustomEmojiLabel($button['text'], $keepFallback);
-        $button['text'] = $label['text'];
-        if (!$keepFallback && $label['icon'] !== '' && !isset($button['icon_custom_emoji_id'])) {
-            $button['icon_custom_emoji_id'] = $label['icon'];
-        }
-        if ($keepFallback) {
-            unset($button['icon_custom_emoji_id']);
-        }
+        $button['text'] = function_exists('stripCustomEmojiTags')
+            ? stripCustomEmojiTags((string) ($button['text'] ?? ''))
+            : (string) ($button['text'] ?? '');
+        unset($button['icon_custom_emoji_id']);
         return $button;
     });
 }
@@ -269,13 +259,11 @@ function telegram($method, $datas = [], $token = null, $allowEmojiFallback = tru
         }
     }
 
+    // The free version never sends the premium emoji of telegram: the tags
+    // are taken out of the text and the icon of a button is removed, so only
+    // the normal emoji are ever shown.
     $premiumEmojiPayload = null;
-    if (function_exists('splitCustomEmojiLabel') && payloadHasCustomEmoji($datas)) {
-        $premiumEmojiPayload = $datas;
-        $datas = customEmojiBlocked($token)
-            ? stripCustomEmojiPayload($datas)
-            : applyCustomEmojiPayload($datas);
-    }
+    $datas = stripCustomEmojiPayload($datas);
 
     // The handle of the request is kept, so a second call to the same method
     // of the bot uses the connection that is already open. Every message of
@@ -581,50 +569,8 @@ $chat_member = $update['chat_member'] ?? null;
 $Chat_type = $update["message"]["chat"]["type"] ?? $update['callback_query']['message']['chat']['type'] ?? '';
 $text = $update["message"]["text"]  ?? '';
 $entities = $update['message']['entities'] ?? null;
-if ($text !== '' && is_array($entities)) {
-    $customEmojis = [];
-    foreach ($entities as $entity) {
-        if (($entity['type'] ?? null) === 'custom_emoji' && isset($entity['custom_emoji_id'])) {
-            $customEmojis[] = $entity;
-        }
-    }
-
-    if ($customEmojis) {
-        usort($customEmojis, fn($a, $b) => $a['offset'] <=> $b['offset']);
-
-        $utf16 = mb_convert_encoding($text, 'UTF-16LE', 'UTF-8');
-        $utf16Length = strlen($utf16);
-        $tagOpen = mb_convert_encoding('<tg-emoji emoji-id="', 'UTF-16LE', 'UTF-8');
-        $tagOpenEnd = mb_convert_encoding('">', 'UTF-16LE', 'UTF-8');
-        $tagClose = mb_convert_encoding('</tg-emoji>', 'UTF-16LE', 'UTF-8');
-
-        $result = '';
-        $cursor = 0;
-        foreach ($customEmojis as $entity) {
-            $start = ((int) $entity['offset']) * 2;
-            $length = ((int) $entity['length']) * 2;
-            if ($start < $cursor || $length <= 0 || $start + $length > $utf16Length) {
-                continue;
-            }
-
-            $emojiId = mb_convert_encoding(
-                htmlspecialchars((string) $entity['custom_emoji_id'], ENT_QUOTES, 'UTF-8'),
-                'UTF-16LE',
-                'UTF-8'
-            );
-
-            $result .= substr($utf16, $cursor, $start - $cursor)
-                . $tagOpen . $emojiId . $tagOpenEnd
-                . substr($utf16, $start, $length)
-                . $tagClose;
-            $cursor = $start + $length;
-        }
-
-        if ($cursor > 0) {
-            $text = mb_convert_encoding($result . substr($utf16, $cursor), 'UTF-8', 'UTF-16LE');
-        }
-    }
-}
+// The free version has no premium emoji of telegram: the emoji of a customer
+// stay the normal emoji and are never turned into a tag.
 if(isset($update['pre_checkout_query'])){
     $Chat_type = "private";
     $from_id = $update['pre_checkout_query']['from']['id'];

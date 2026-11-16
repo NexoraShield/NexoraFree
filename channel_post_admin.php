@@ -517,9 +517,8 @@ if (!function_exists('nexora_channel_post_entities_html')) {
                     ? ['<a href="tg://user?id=' . $entity['user_id'] . '">', '</a>']
                     : ['', ''];
             case 'custom_emoji':
-                return $entity['custom_emoji_id'] === ''
-                    ? ['', '']
-                    : ['<tg-emoji emoji-id="' . htmlspecialchars($entity['custom_emoji_id'], ENT_QUOTES, 'UTF-8') . '">', '</tg-emoji>'];
+                // The free version has no premium emoji of telegram.
+                return ['', ''];
             default:
                 return ['', ''];
         }

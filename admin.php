@@ -10678,7 +10678,7 @@ if ($datain == "settimecornday" && $adminrulecheck['rule'] == "administrator") {
     if (!in_array($bt_lang, ['fa', 'en', 'ru', 'zh'], true)) {
         $bt_lang = 'fa';
     }
-    sendmessage($from_id, $textbotlang['Admin']['askNewText'] . "\n\n" . ($textbotlang['bottext']['msg_emoji_hint'] ?? '') . "\n\n" . $textbotlang['bottext']['reset_hint'], $backadmin, 'HTML');
+    sendmessage($from_id, $textbotlang['Admin']['askNewText'] . "\n\n" . $textbotlang['bottext']['reset_hint'], $backadmin, 'HTML');
     savedata("clear", "bt_lang", $bt_lang);
     savedata("save", "bt_key", $bt_key);
     step("get_new_text", $from_id);
@@ -10710,21 +10710,14 @@ if ($datain == "settimecornday" && $adminrulecheck['rule'] == "administrator") {
         sendmessage($from_id, $textbotlang['bottext']['msg_empty'], $backadmin, 'HTML');
         return;
     }
-    // A premium emoji is stored as a <tg-emoji> tag. Before the text is saved
-    // it is sent as a preview: when Telegram refuses it (the bot cannot use
-    // premium emoji or the id is wrong) the plain text with the normal emoji
-    // is stored instead, so the edit is never lost and the button keeps
-    // working.
+    // The free version has no premium emoji of telegram: the tags are taken
+    // out of the text and the normal emoji of the text are kept.
     $bt_emojiRejected = false;
     if ($bt_new !== '0' && stripos($bt_new, '<tg-emoji') !== false) {
-        $bt_wasBlocked = customEmojiBlocked();
-        sendmessage($from_id, $bt_new, null, 'HTML');
-        if (!$bt_wasBlocked && customEmojiBlocked()) {
-            $bt_plain = trim(preg_replace('/[ \t]+/u', ' ', stripCustomEmojiTags($bt_new)));
-            if ($bt_plain !== '') {
-                $bt_new = $bt_plain;
-                $bt_emojiRejected = true;
-            }
+        $bt_plain = trim(preg_replace('/[ \t]+/u', ' ', stripCustomEmojiTags($bt_new)));
+        if ($bt_plain !== '') {
+            $bt_new = $bt_plain;
+            $bt_emojiRejected = true;
         }
     }
     $bt_map = (isset($setting['text_edit']) && $setting['text_edit']) ? json_decode($setting['text_edit'], true) : [];

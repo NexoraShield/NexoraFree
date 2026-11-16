@@ -190,12 +190,6 @@ PHP_BIN="$(command -v php)"
 echo "==> Checking PHP syntax"
 "$PHP_BIN" -l "$PACKAGE_DIR/nexora_style.php" >/dev/null
 "$PHP_BIN" -l "$PACKAGE_DIR/migrate.php" >/dev/null
-"$PHP_BIN" -l "$PACKAGE_DIR/patch_keyboard.php" >/dev/null
-"$PHP_BIN" -l "$PACKAGE_DIR/patch_panel.php" >/dev/null
-"$PHP_BIN" -l "$PACKAGE_DIR/patch_botapi.php" >/dev/null
-"$PHP_BIN" -l "$PACKAGE_DIR/patch_bottext.php" >/dev/null
-"$PHP_BIN" -l "$PACKAGE_DIR/patch_admin.php" >/dev/null
-"$PHP_BIN" -l "$PACKAGE_DIR/patch_miniapp.php" >/dev/null
 "$PHP_BIN" -l "$PACKAGE_DIR/panel/btnstyle.php" >/dev/null
 "$PHP_BIN" -l "$PACKAGE_DIR/panel/textemojis.php" >/dev/null
 "$PHP_BIN" -l "$PACKAGE_DIR/panel/emojis.php" >/dev/null
@@ -356,29 +350,13 @@ fi
 nexora_progress 60
 
 if [[ -f "$TARGET/panel/product.php" ]]; then
-  for _f in btnstyle.php textemojis.php emojis.php panels.php health.php export.php; do
+  for _f in health.php; do
     chmod --reference="$TARGET/panel/product.php" "$TARGET/panel/$_f" 2>/dev/null || chmod 0644 "$TARGET/panel/$_f"
     chown --reference="$TARGET/panel/product.php" "$TARGET/panel/$_f" 2>/dev/null || true
   done
 fi
 
-_skipped_patches=""
-for _patch in patch_keyboard patch_panel patch_botapi patch_bottext patch_admin patch_miniapp; do
-  echo "==> Patching with ${_patch} (dry run)"
-  if "$PHP_BIN" "$PACKAGE_DIR/${_patch}.php" "$TARGET"; then
-    echo "==> Patching with ${_patch} (apply)"
-    "$PHP_BIN" "$PACKAGE_DIR/${_patch}.php" "$TARGET" --apply
-  else
-    echo "WARNING: ${_patch} skipped for this nexorabot version."
-    _skipped_patches="$_skipped_patches $_patch"
-    if [ "$_patch" = "patch_keyboard" ]; then
-      echo "FATAL: core keyboard patch failed — aborting, nothing was changed." >&2
-      exit 1
-    fi
-  fi
-done
-
-echo "==> Checking patched syntax"
+echo "==> Checking the syntax of the code"
 "$PHP_BIN" -l "$TARGET/keyboard.php" >/dev/null
 "$PHP_BIN" -l "$TARGET/panel/inc/layout_head.php" >/dev/null
 "$PHP_BIN" -l "$TARGET/botapi.php" >/dev/null

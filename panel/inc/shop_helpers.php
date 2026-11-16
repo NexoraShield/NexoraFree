@@ -74,14 +74,7 @@ function nexora_agentshop_clean_style($v): string
 }
 function nexora_agentshop_clean_emoji($v): string
 {
-    $v = trim((string) $v);
-    if ($v === '') return '';
-    if (preg_match('/^\d{1,32}$/', $v)) return $v;
-    if (preg_match('/emoji-id\s*=\s*"(\d{1,32})"/i', $v, $m)) return $m[1];
-    if (preg_match('/^\{emoji:([^}]+)\}$/u', $v, $m) && function_exists('nexora_emoji_lookup')) {
-        $row = nexora_emoji_lookup(trim($m[1]));
-        if ($row && !empty($row['custom_emoji_id'])) return (string) $row['custom_emoji_id'];
-    }
+    // The free version has no premium emoji of telegram: no id is kept.
     return '';
 }
 function nexora_agentshop_style_select($selected, string $name = 'btn_style', string $id = ''): string
