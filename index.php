@@ -12,7 +12,6 @@ nexoraEnsureInstallerRemoved();
 require_once 'keyboard.php';
 require_once 'vendor/autoload.php';
 require_once 'panels.php';
-require_once 'agentshop_admin.php';
 require_once 'channel_post_admin.php';
 $textbotlang = languagechange();
 // A premium emoji label is restored to its tagged form, so a button that was
@@ -23,8 +22,10 @@ $__nexora_textSteps = ['get_new_text', 'adv_test_name', 'adv_topup_name', 'adv_t
 $__nexora_userRow = select("user", "step", "id", $from_id, "select");
 $__nexora_editingText = is_array($__nexora_userRow) && in_array((string) ($__nexora_userRow['step'] ?? ''), $__nexora_textSteps, true);
 if (!$__nexora_editingText) {
-    $text = restoreCustomEmojiLabel($text);
-}
+        // The free version shows the name of the panel as plain text: the
+        // premium emoji of telegram is not supported.
+        $text = stripCustomEmojiTags($text);
+    }
 unset($__nexora_textSteps, $__nexora_userRow, $__nexora_editingText);
 #-----------telegram_ip_ranges------------#
 if (!checktelegramip())

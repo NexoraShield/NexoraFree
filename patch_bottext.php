@@ -36,7 +36,6 @@ if (function_exists('nexora_emoji_placeholder')) {
         ];
     }
 }
-include __DIR__ . '/inc/emoji_picker_bar.php';
 ?>
 <p class="field-hint" style="margin:0 0 14px">روی ایموجی کلیک کنید بعد داخل متن — <code dir="ltr">{emoji:slug}</code> در همه متن‌ها (حتی چندتایی) نمایش داده می‌شود.</p>
 

@@ -134,12 +134,7 @@ $initials = mb_strtoupper(mb_substr($currentUser, 0, 1, 'UTF-8'), 'UTF-8');
             <span class="nav-icon"><?= icon('dashboard') ?></span><span
               class="nav-label"><?= $textbotlang['panel']['layoutNavSettings'] ?></span>
           </a>
-          <a href="reports.php" class="nav-item <?= $activeNav === 'reports' ? 'active' : '' ?>"
-            title="گزارش‌ها و آمار">
-            <span class="nav-icon"><?= icon('chart') ?></span><span
-              class="nav-label">گزارش‌ها و آمار</span>
-          </a>
-        </div>
+          </div>
         <div class="nav-section">
           <div class="nav-heading"><?= $textbotlang['panel']['layoutNavLogout'] ?></div>
           <a href="users.php" class="nav-item <?= $activeNav === 'users' ? 'active' : '' ?>"
@@ -172,57 +167,20 @@ $initials = mb_strtoupper(mb_substr($currentUser, 0, 1, 'UTF-8'), 'UTF-8');
             <span class="nav-icon"><?= icon('card') ?></span><span
               class="nav-label"><?= $textbotlang['panel']['layoutSearchBoxPlaceholder'] ?></span>
           </a>
-          <a href="finance.php" class="nav-item <?= $activeNav === 'finance' ? 'active' : '' ?>"
-            title="مالی و درگاه‌های پرداخت">
-            <span class="nav-icon"><?= icon('card') ?></span><span
-              class="nav-label">مالی و درگاه‌ها</span>
-          </a>
-
-          <a href="keyboard.php" class="nav-item <?= $activeNav === 'keyboard' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['layoutPageTitleKeyboard'] ?>">
-            <span class="nav-icon">
-              <?= icon('keyboard') ?>
-            </span><span class="nav-label"><?= $textbotlang['panel']['layoutThemeToggleLabel'] ?></span>
-          </a>
           <a href="bottext.php" class="nav-item <?= $activeNav === 'bottext' ? 'active' : '' ?>"
             title="<?= $textbotlang['panel']['bottextPageTitle'] ?>">
             <span class="nav-icon"><?= icon('edit') ?></span><span
               class="nav-label"><?= $textbotlang['panel']['bottextPageTitle'] ?></span>
-          </a>
-          <a href="emoji_picker.php" class="nav-item <?= $activeNav === 'emoji_picker' ? 'active' : '' ?>"
-            title="انتخاب‌گر ایموجی پرمیوم">
-            <span class="nav-icon"><?= icon('smile') ?></span><span
-              class="nav-label">انتخاب‌گر ایموجی</span>
           </a>
           <a href="maintenance.php" class="nav-item <?= $activeNav === 'maintenance' ? 'active' : '' ?>"
             title="حالت تعمیرات">
             <span class="nav-icon"><?= icon('tool') ?></span><span
               class="nav-label">تعمیرات</span>
           </a>
-          <a href="audit.php" class="nav-item <?= $activeNav === 'audit' ? 'active' : '' ?>"
-            title="گزارش فعالیت">
-            <span class="nav-icon"><?= icon('list') ?></span><span
-              class="nav-label">Audit Log</span>
-          </a>
-          <a href="magic.php" class="nav-item <?= $activeNav === 'magic' ? 'active' : '' ?>"
-            title="معجزه">
-            <span class="nav-icon"><?= icon('star') ?></span><span
-              class="nav-label">معجزه</span>
-          </a>
           <a href="botcolors.php" class="nav-item <?= $activeNav === 'botcolors' ? 'active' : '' ?>"
             title="رنگ تمام کلیدها">
             <span class="nav-icon"><?= icon('palette') ?></span><span
               class="nav-label">رنگ تمام کلیدها</span>
-          </a>
-          <a href="botbuttons.php" class="nav-item <?= $activeNav === 'botbuttons' ? 'active' : '' ?>"
-            title="دکمه‌های ربات">
-            <span class="nav-icon"><?= icon('grid') ?></span><span
-              class="nav-label">دکمه‌های ربات</span>
-          </a>
-          <a href="tickets.php" class="nav-item <?= $activeNav === 'tickets' ? 'active' : '' ?>"
-            title="پشتیبانی و تیکت‌ها">
-            <span class="nav-icon"><?= icon('headset') ?></span><span
-              class="nav-label">پشتیبانی و تیکت‌ها</span>
           </a>
           <a href="backup.php" class="nav-item <?= $activeNav === 'backup' ? 'active' : '' ?>"
             title="پشتیبان‌گیری">
@@ -238,26 +196,6 @@ $initials = mb_strtoupper(mb_substr($currentUser, 0, 1, 'UTF-8'), 'UTF-8');
             title="بررسی حجم/زمان سرویس‌ها">
             <span class="nav-icon"><?= icon('chart') ?></span><span
               class="nav-label">بررسی حجم/زمان</span>
-          </a>
-          <a href="custom_apps.php" class="nav-item <?= $activeNav === 'custom_apps' ? 'active' : '' ?>"
-            title="برنامه اختصاصی و آموزش اتصال">
-            <span class="nav-icon"><?= icon('download') ?></span><span
-              class="nav-label">برنامه و آموزش</span>
-          </a>
-          <a href="collab.php" class="nav-item <?= $activeNav === 'collab' ? 'active' : '' ?>"
-            title="همکاری">
-            <span class="nav-icon"><?= icon('link') ?></span><span
-              class="nav-label">همکاری</span>
-          </a>
-          <a href="agents.php" class="nav-item <?= $activeNav === 'agents' ? 'active' : '' ?>"
-            title="مدیریت نمایندگان">
-            <span class="nav-icon"><?= icon('users') ?></span><span
-              class="nav-label">نمایندگان</span>
-          </a>
-          <a href="agentshop.php" class="nav-item <?= $activeNav === 'agentshop' ? 'active' : '' ?>"
-            title="فروشگاه پنل نمایندگی">
-            <span class="nav-icon"><?= icon('package') ?></span><span
-              class="nav-label">فروشگاه نمایندگی</span>
           </a>
           <a href="shop.php" class="nav-item <?= $activeNav === 'shop' ? 'active' : '' ?>"
             title="فروشگاه‌های ربات، دقیقاً مثل خود ربات (پنل نمایندگی، پنل اجنت و شارژ آن‌ها)">

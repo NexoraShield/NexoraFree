@@ -40,7 +40,6 @@ else
   echo "    No backup dir found under $backup_root — skipping restore."
 fi
 echo "==> Removing added files"
-for f in nexora_style.php panel/btnstyle.php panel/textemojis.php panel/emojis.php panel/panels.php panel/health.php panel/export.php panel/inc/emoji_picker_bar.php panel/js/emoji-insert.js panel/css/nexora-glass.css agent-panel/login.php agent-panel/index.php agent-panel/logout.php agent-panel/inc/auth.php cronbot/nudge_unpaid.php cronbot/frenzyex.php tools/nexora-indexes.php app/assets/nexora-theme.css payment/frenzyex.php; do
   if [[ -e "$TARGET/$f" ]]; then rm -f -- "$TARGET/$f"; echo "    removed $f"; fi
 done
 if [[ "$REMOVE_DB" -eq 1 ]]; then

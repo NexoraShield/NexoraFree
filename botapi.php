@@ -52,6 +52,9 @@ function walkKeyboardButtons($replyMarkup, callable $handler)
 }
 function applyCustomEmojiToMarkup($replyMarkup)
 {
+    // The free version does not use the premium emoji of telegram: the emoji
+    // of a button is always a normal one.
+    return $replyMarkup;
     return walkKeyboardButtons($replyMarkup, function ($button, $markupKey = 'inline_keyboard') {
         // An inline keyboard button can show the premium emoji as an icon, so
         // the fallback character is removed from the text (otherwise the emoji

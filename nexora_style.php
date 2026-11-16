@@ -70,10 +70,7 @@ if (!function_exists('nexora_btn_style')) {
 if (!function_exists('nexora_btn_emoji_id')) {
     function nexora_btn_emoji_id($raw): string
     {
-        $raw = trim((string) $raw);
-        if ($raw === '') return '';
-        if (preg_match('/^\d{1,32}$/', $raw)) return $raw;
-        if (preg_match('/emoji-id\s*=\s*"(\d{1,32})"/i', $raw, $m)) return $m[1];
+        // The free version never uses the premium emoji of telegram.
         return '';
     }
 }
@@ -143,15 +140,8 @@ if (!function_exists('nexora_emoji_make_slug')) {
 if (!function_exists('nexora_emoji_list')) {
     function nexora_emoji_list($pdo = null, bool $fresh = false): array
     {
-        static $mem = null;
-        if ($mem !== null && !$fresh) return $mem;
-        $pdo = $pdo instanceof PDO ? $pdo : ($GLOBALS['pdo'] ?? null);
-        if (!($pdo instanceof PDO)) return [];
-        try {
-            $stmt = $pdo->query('SELECT * FROM bot_custom_emoji ORDER BY emoji_name ASC, id ASC');
-            $mem = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
-            return $mem;
-        } catch (Throwable $e) { return []; }
+        // The free version has no library of the premium emoji.
+        return [];
     }
 }
 

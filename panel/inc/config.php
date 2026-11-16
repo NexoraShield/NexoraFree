@@ -333,9 +333,9 @@ function panel_agent_link(): string
     $host = trim((string) ($domainhosts ?? ''));
     if ($host !== '' && strpos($host, '{') === false) {
         if (preg_match('#^https?://#i', $host)) {
-            return rtrim($host, '/') . '/agent-panel/';
+            return '';
         }
-        return 'https://' . trim($host, '/') . '/agent-panel/';
+        return '';
     }
     if (function_exists('nexora_agent_panel_link')) {
         $link = trim((string) nexora_agent_panel_link());
@@ -343,7 +343,7 @@ function panel_agent_link(): string
             return $link;
         }
     }
-    return '/agent-panel/';
+    return '';
 }
 
 /**

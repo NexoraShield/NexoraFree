@@ -2,8 +2,6 @@
 require_once __DIR__ . '/vendor/autoload.php';
 // The questions of the agent shop are needed by the payment handlers as well:
 // they are asked right after the payment is confirmed.
-require_once __DIR__ . '/agentshop_admin.php';
-
 const MIN_PHP_VERSION = '8.2.0';
 
 use Endroid\QrCode\Builder\Builder;
@@ -2682,7 +2680,7 @@ function nexora_agent_panel_deliver(array $product, string $userId): array
     if ($credit > 0) {
         addBalance($userId, $credit);
     }
-    $link = 'https://' . (string) $domainhosts . '/agent-panel/';
+    
     return [
         'ok' => $ok,
         'username' => $username,
@@ -2699,7 +2697,7 @@ function nexora_agent_panel_deliver(array $product, string $userId): array
 function nexora_agent_panel_link(): string
 {
     global $domainhosts;
-    return 'https://' . (string) $domainhosts . '/agent-panel/';
+    return '';
 }
 
 /**

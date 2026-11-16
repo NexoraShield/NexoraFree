@@ -199,7 +199,7 @@ echo "==> Checking PHP syntax"
 "$PHP_BIN" -l "$PACKAGE_DIR/panel/btnstyle.php" >/dev/null
 "$PHP_BIN" -l "$PACKAGE_DIR/panel/textemojis.php" >/dev/null
 "$PHP_BIN" -l "$PACKAGE_DIR/panel/emojis.php" >/dev/null
-"$PHP_BIN" -l "$PACKAGE_DIR/panel/inc/emoji_picker_bar.php" >/dev/null
+"$PHP_BIN" -l "$PACKAGE_DIR/" >/dev/null
 "$PHP_BIN" -l "$PACKAGE_DIR/panel/panels.php" >/dev/null
 "$PHP_BIN" -l "$PACKAGE_DIR/panel/health.php" >/dev/null
 "$PHP_BIN" -l "$PACKAGE_DIR/panel/export.php" >/dev/null
@@ -243,7 +243,7 @@ if [[ -f "$TARGET/nexora_style.php" ]]; then
     done
     echo "    stock files restored from $prev_backup"
   fi
-  for _f in nexora_style.php panel/btnstyle.php panel/textemojis.php panel/emojis.php panel/panels.php panel/health.php panel/export.php panel/inc/emoji_picker_bar.php panel/js/emoji-insert.js panel/css/nexora-glass.css agent-panel/login.php agent-panel/index.php agent-panel/logout.php agent-panel/inc/auth.php cronbot/nudge_unpaid.php cronbot/frenzyex.php tools/nexora-indexes.php app/assets/nexora-theme.css payment/frenzyex.php; do
+  for _f in nexora_style.php panel/health.php panel/export.php panel/css/nexora-glass.css cronbot/nudge_unpaid.php cronbot/frenzyex.php tools/nexora-indexes.php app/assets/nexora-theme.css payment/frenzyex.php; do
     rm -f -- "$TARGET/$_f"
   done
   echo "    old files removed — fresh install follows"
@@ -567,7 +567,7 @@ echo "==> Verifying installation completeness"
 _missing=0
 # migrate.php / uninstall.sh / install.sh are intentionally NOT installed into the
 # target directory, so they must not be part of the completeness check.
-for _f in nexora_style.php keyboard.php index.php admin.php function.php panel/emojis.php panel/magic.php agent-panel/inc/auth.php; do
+for _f in nexora_style.php keyboard.php index.php admin.php function.php ; do
   if [[ ! -f "$TARGET/$_f" ]]; then echo "  MISSING FILE: $_f"; _missing=1; fi
 done
 if [[ $_missing -eq 1 ]]; then echo "ERROR: required files missing." >&2; exit 1; fi
@@ -603,7 +603,6 @@ echo "  4. Open your panel: https://YOUR-DOMAIN/panel/bottext.php"
 echo "     Use the emoji picker to put premium emoji in ANY bot text."
 echo "  5. Open your panel: https://YOUR-DOMAIN/panel/textemojis.php"
 echo "     Set premium emoji for each main-menu button."
-echo "  6. Agent panel: https://YOUR-DOMAIN/agent-panel/ (set passwords via /agentpass in bot)"
 echo "  7. FrenzyEx gateway: Finance -> Payment settings -> FrenzyEx"
 echo "  8. Optional speed: php tools/nexora-indexes.php"
 echo "     Optional unpaid reminders cron: */30 * * * * php BOTDIR/cronbot/nudge_unpaid.php"

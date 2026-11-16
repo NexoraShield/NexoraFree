@@ -2,7 +2,6 @@
 #----------------[  admin section  ]------------------#
 require_once __DIR__ . '/panel_protocol.php';
 require_once __DIR__ . '/testservice_admin.php';
-require_once __DIR__ . '/agentshop_admin.php';
 require_once __DIR__ . '/shop_admin.php';
 require_once __DIR__ . '/channel_post_admin.php';
 require_once __DIR__ . '/update_bot_admin.php';

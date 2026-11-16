@@ -269,8 +269,6 @@ include __DIR__ . '/inc/layout_head.php';
   <button class="btn btn-primary" onclick="openModal('addModal')"><?= icon('plus', 14) ?> افزودن سرویس تست</button>
 </div>
 
-<?php include __DIR__ . '/inc/emoji_picker_bar.php'; ?>
-
 <?php
 $testLimit = (int) (db_fetch($pdo, "SELECT limit_usertest_all FROM setting LIMIT 1")['limit_usertest_all'] ?? 1);
 $testUsersWith = (int) db_count($pdo, "SELECT COUNT(*) FROM user WHERE limit_usertest > 0");
