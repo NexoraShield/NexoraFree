@@ -1,5 +1,12 @@
 # Nexora Bot — یادداشت‌های انتشار
 
+## v1.23.06 (2026-11-16) — The customers of the site come in the panel of the bot
+
+- The page of the customer of the site opens in the panel of the bot (the site sends the customer with a signature; the panel only trusts the requests that come from the machine of the hub).
+
+---
+
+
 ## v1.23.05 (2026-11-16) — The customers of the site have their own page in the panel of the bot
 
 - The customers of app.nexorashield.com.tr that are connected to a bot can open the panel of that bot: the page `panel/customer.php` shows the services of the bot and their prices.

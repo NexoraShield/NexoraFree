@@ -93,11 +93,35 @@ function nexora_customer_logout(): void
 }
 
 /**
+ * Is the address of the machine of the hub itself?
+ *
+ * The site of the customers and the panel of the bot are on the same machine,
+ * so the request comes from a private address (the web server of the bot sees
+ * the bridge of docker, not 127.0.0.1).
+ */
+function nexora_customer_is_local(string $address): bool
+{
+    if ($address === '') {
+        return false;
+    }
+    if (!filter_var($address, FILTER_VALIDATE_IP)) {
+        return false;
+    }
+    // the addresses that are not private and not reserved are from the
+    // outside: they are not trusted.
+    return !filter_var(
+        $address,
+        FILTER_VALIDATE_IP,
+        FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+    );
+}
+
+/**
  * The customer that comes from the site of the customers.
  *
  * The site sends the id of the customer and a signature of it. The signature
- * is only trusted when the request comes from the hub itself (the loopback),
- * so nobody from the outside can come in with a made up id.
+ * is only trusted when the request comes from the machine of the hub (a
+ * private address), so nobody from the outside can come in with a made up id.
  */
 function nexora_customer_from_site(): ?array
 {
@@ -107,7 +131,7 @@ function nexora_customer_from_site(): ?array
         return null;
     }
     $remote = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
-    if (!in_array($remote, ['127.0.0.1', '::1'], true)) {
+    if (!$nexora_customer_is_local($remote)) {
         return null;
     }
     $keyFile = dirname(__DIR__) . '/panel.key';
