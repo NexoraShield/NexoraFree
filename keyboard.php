@@ -35,10 +35,7 @@ $replacements = [
     'text_affiliates' => $textbotlang['textbot']['affiliates'],
     'text_wheel_luck' => $textbotlang['textbot']['wheelLuck'],
     'text_extend' => $textbotlang['textbot']['extend'],
-    'text_agentpanel' => $textbotlang['textbot']['agentPanel'],
     'text_requestagent' => $textbotlang['textbot']['requestAgent'],
-    'text_agentshop' => $textbotlang['textbot']['agentShop'],
-    'text_agentpanelshop' => $textbotlang['textbot']['agentPanelShop']
 ];
 // Map every button label the web panel can style to its storage key.
 // The panel offers a colour and an emoji for all keyboard.* texts, for the
@@ -90,8 +87,6 @@ if (is_array($keyboardLayout) && isset($keyboardLayout['keyboard']) && is_array(
     $keyboardRows = $keyboardLayout['keyboard'];
 }
 
-$agentPanelAllowed = $users['agent'] != "f";
-$agentRequestAllowed = $users['agent'] == "f";
 if (!empty($keyboardRows)) {
     $allowed_btn_styles = nexora_color_slugs();
     foreach ($keyboardRows as $kb_r => $kb_row) {
@@ -160,18 +155,6 @@ if ($setting['inlinebtnmain'] == "oninline" && !empty($keyboardRows)) {
             }
             if ($keyboard['text'] == "text_usertest") {
                 $trace_keyboard[$key][$keyboard_key]['callback_data'] = "usertestbtn";
-            }
-            if ($keyboard['text'] == "text_agentpanel") {
-                $trace_keyboard[$key][$keyboard_key]['callback_data'] = "agentpanel";
-            }
-            if ($keyboard['text'] == "text_requestagent") {
-                $trace_keyboard[$key][$keyboard_key]['callback_data'] = "requestagent";
-            }
-            if ($keyboard['text'] == "text_agentshop") {
-                $trace_keyboard[$key][$keyboard_key]['callback_data'] = "agentshop";
-            }
-            if ($keyboard['text'] == "text_agentpanelshop") {
-                $trace_keyboard[$key][$keyboard_key]['callback_data'] = "agentpanelshop";
             }
         }
     }
@@ -981,11 +964,7 @@ $helpappremove['keyboard'][] = [
 ];
 $json_list_remove_helpـlink = json_encode($helpappremove);
 //------------------  [ listpanelusers ]----------------//
-// The panel of the agent (the panel of the reseller) is not a panel that sells
-// services: it must never show up in the list of the panels a customer can
-// buy a service from.
 $activePanelRows = array_filter($allPanelRows, fn($panel) => $panel['status'] == "active"
-    && (string) ($panel['type'] ?? '') !== 'nexora_agent'
     && in_array($panel['agent'], [$users['agent'], "all"]));
 $manualsellCounts = [];
 if (in_array('Manualsale', array_column($activePanelRows, 'type'))) {
@@ -1194,7 +1173,6 @@ $panelOptionRows = [
     'WGDashboard' => [['manualCreateConfig'], ['panelName', 'deletePanel'], ['editPassword'], ['editPanelUrl', 'setInboundId'], ['renewalMethod', 'usernameMethod'], ['accountCreateLimit', 'changeUserGroup'], $panelTestRow, ...$panelPriceRows, ['changeLocationPrice'], ...$panelLimitRows, ['inboundDeactivate']],
     'rebecca' => [['panelName', 'deletePanel'], ['editPassword'], ['editPanelUrl', 'setProtocolInbound'], ['renewalMethod', 'usernameMethod'], ['accountCreateLimit', 'changeUserGroup'], $panelTestRow, ...$panelPriceRows, ['changeLocationPrice'], ...$panelLimitRows, ['inboundDeactivate']],
     'ibsng' => [['panelName', 'deletePanel'], ['editPassword', 'editUsername'], ['editPanelUrl', 'setGroupName'], ['renewalMethod', 'usernameMethod'], ['accountCreateLimit', 'changeUserGroup'], ...$panelPriceRows, ...$panelLimitRows],
-    'nexora_agent' => [['panelName', 'deletePanel'], ['editPassword'], ['editPanelUrl', 'panelSetting'], ['accountCreateLimit', 'changeUserGroup'], ...$panelPriceRows, ...$panelLimitRows],
     'Manualsale' => [['panelName', 'deletePanel'], ['usernameMethod'], ['accountCreateLimit', 'changeUserGroup'], ['addConfig', 'deleteConfig'], ['editConfig']],
 ];
 $panelOptionRows['mikrotik'] = $panelOptionRows['ibsng'];
@@ -1280,7 +1258,6 @@ $keyboardtypepanel = json_encode([
         ],
         [
             ['text' => $textbotlang['keyboard']['passargadPanel'], 'callback_data' => "typepanel#pasarguard"],
-            ['text' => $textbotlang['keyboard']['nexoraAgentPanel'], 'callback_data' => "typepanel#nexora_agent"]
         ],
         [
             ['text' => $textbotlang['keyboard']['panelTypeSanaei'], 'callback_data' => 'typepanel#x-ui_single'],

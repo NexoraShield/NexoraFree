@@ -69,9 +69,15 @@ nexora update     # 更新到最新版本
 nexora help       # 显示帮助
 ```
 
-## 🎨 高级表情支持
+## 🎨 按钮颜色
 
-Nexora 支持 Telegram 高级表情。在产品名称、按钮文本和机器人消息中使用 `{emoji:slug}` 语法。
+- **primary**（蓝色）
+- **success**（绿色）
+- **danger**（红色）
+
+产品、分类或面板的颜色在网页面板 → *按钮颜色* 中设置。
+
+> 本版本**不支持** Telegram 高级表情，机器人只使用普通表情。
 
 ## 💳 FrenzyEx 支付网关
 

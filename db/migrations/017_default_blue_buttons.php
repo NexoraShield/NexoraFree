@@ -55,8 +55,6 @@ return static function (PDO $pdo, Schema $schema): void {
     $mainMenuKeys = [
         'text_sell', 'text_extend', 'text_usertest', 'text_wheel_luck',
         'text_Purchased_services', 'accountwallet', 'text_affiliates',
-        'text_Tariff_list', 'text_support', 'text_help', 'text_agentpanel',
-        'text_requestagent', 'text_agentshop', 'text_agentpanelshop',
     ];
     $keys = [];
     foreach (($texts['keyboard'] ?? []) as $key => $label) {

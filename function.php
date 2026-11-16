@@ -1742,12 +1742,7 @@ function DirectPayment($order_id, $image = 'images.jpg')
         $serviceParams = json_decode($service_order['value'] ?? '', true) ?: [];
         $nameloc = select("invoice", "*", "username", $service_order['username'], "select");
     }
-    // The products of the reseller shop (and the top up of that shop) are
-    // delivered by hand: the money of the customer never touches his wallet.
-    // The difference between the paid amount and the price is only reported
-    // to the administrator, it is not booked on the wallet.
-    $walletStaysUntouched = (strpos($orderNote, 'agentshop:') === 0) || (strpos($orderNote, 'topup:agentshop:') === 0);
-    if ($orderType != "topup" && !$walletStaysUntouched) {
+    if ($orderType != "topup") {
         $paidAmount = intval($Payment_report['price']);
         $walletPortion = max(0, $orderPrice - $paidAmount);
         addBalance($Balance_id['id'], $paidAmount - $orderPrice);
@@ -1765,256 +1760,6 @@ function DirectPayment($order_id, $image = 'images.jpg')
     $stmtReset->execute([$Balance_id['id']]);
     clearSelectCache('user');
     if ($orderType == "buy") {
-        // Panel top up: the invoice note carries "topup:<shop>:<id>:<panel>".
-        // For the agent panel shop the credit is added to the wallet of the
-        // customer, for the agent shop the admin does the charge by hand.
-        $topupMarker = [];
-        if (preg_match('/^topup:([a-z]+):(\d+)(?::(\d+))?$/', (string) ($get_invoice['note'] ?? ''), $topupMarker)) {
-            $topupItem = nexora_topup_product_by_id((int) $topupMarker[2]);
-            if ($topupItem) {
-                $topupShop = nexora_topup_shop_key($topupMarker[1]);
-                $claimTopupInvoice = $pdo->prepare("UPDATE invoice SET Status = 'active' WHERE id_invoice = ? AND Status <> 'active'");
-                $claimTopupInvoice->execute([$get_invoice['id_invoice']]);
-                clearSelectCache('invoice');
-                if ($claimTopupInvoice->rowCount() === 0) {
-                    error_log('[DirectPayment] top up order already settled id_order=' . $order_id);
-                    return;
-                }
-                $topupCredit = floatval($topupItem['credit'] ?? 0);
-                $topupPanel = trim((string) ($get_invoice['Service_location'] ?? ''));
-                // The balance before the charge is kept, so the administrator
-                // sees how much the panel had and how much it has now.
-                $topupBalanceBefore = floatval(select("user", "Balance", "id", $Balance_id['id'], "select")['Balance'] ?? 0);
-                if ($topupShop === 'agentpanelshop' && $topupCredit > 0) {
-                    addBalance($Balance_id['id'], $topupCredit);
-                }
-                $topupBalance = floatval(select("user", "Balance", "id", $Balance_id['id'], "select")['Balance'] ?? 0);
-                $topupText = strtr($textbotlang['users']['topUp']['success'], [
-                    '{price}' => number_format($orderPrice),
-                    '{credit}' => number_format($topupCredit),
-                    '{balance}' => number_format($topupBalance),
-                    '{panel}' => $topupPanel,
-                ]);
-                if ($topupShop === 'agentshop' || $topupCredit <= 0) {
-                    // The charge of the agent shop is done by the support, so
-                    // the customer is told what happens next. The same goes
-                    // for a package without a credit: it is delivered by hand.
-                    $topupText = ($textbotlang['users']['topUp']['successManual'] ?? "✅ عملیات با موفقیت انجام شد و مشخصات برای پشتیبانی ارسال شد.\n\nنهایتا تا ۲۴ ساعت اعمال می‌شود. برای تسریع در روند می‌توانید به پشتیبانی ربات پیام بدهید.");
-                }
-                sendmessage($Balance_id['id'], $topupText, null, 'HTML');
-                // the admin gets the details, so the charge can be done
-                $topupAdminText = "💳 <b>شارژ پنل تایید شد</b>\n"
-                    . "👤 کاربر: " . $Balance_id['id'] . " (" . trim((string) ($Balance_id['username'] ?? '')) . ")\n"
-                    . ($topupShop === 'agentshop'
-                        ? "🛒 محصول خریداری‌شده: " . ($topupPanel !== '' ? $topupPanel : '-') . "\n"
-                        : "🖥 پنل انتخاب‌شده: " . ($topupPanel !== '' ? $topupPanel : '-') . "\n")
-                    . "🏷 گزینه شارژ: " . $topupItem['name'] . "\n"
-                    . "💳 مبلغ پرداختی: " . number_format($orderPrice) . " تومان\n"
-                    . "🎁 اعتبار: " . number_format($topupCredit) . "\n";
-                if (trim((string) ($topupItem['description'] ?? '')) !== '') {
-                    $topupAdminText .= "📝 توضیحات گزینه: " . strip_tags((string) $topupItem['description']) . "\n";
-                }
-                if ($topupShop === 'agentpanelshop') {
-                    // The panel of the customer is shown with its details, so
-                    // the administrator knows which panel was charged.
-                    $topupAdminText .= "👤 نام کاربری پنل: " . $Balance_id['id'] . "\n"
-                        . "🔗 لینک پنل: " . nexora_agent_panel_link() . "\n"
-                        . "💰 موجودی قبل از شارژ: " . number_format($topupBalanceBefore) . " تومان\n"
-                        . ($topupCredit > 0
-                            ? "✅ اعتبار به کیف پول کاربر اضافه شد. موجودی فعلی: " . number_format($topupBalance) . " تومان."
-                            : "ℹ️ به کیف پول اضافه نشد. محصول باید دستی به مشتری تحویل شود.");
-                } else {
-                    $topupAdminText .= "ℹ️ این مبلغ به کیف پول کاربر اضافه نشده است.\n"
-                        . "⚠️ این شارژ باید دستی انجام شود.";
-                }
-                if (strlen((string) ($setting['Channel_Report'] ?? '')) > 0) {
-                    telegram('sendmessage', [
-                        'chat_id' => $setting['Channel_Report'],
-                        'message_thread_id' => $buyreport,
-                        'text' => $topupAdminText,
-                        'parse_mode' => 'HTML'
-                    ]);
-                }
-                foreach ((array) $admin_ids as $topupAdminId) {
-                    if (trim((string) $topupAdminId) === '') {
-                        continue;
-                    }
-                    telegram('sendmessage', [
-                        'chat_id' => $topupAdminId,
-                        'text' => $topupAdminText,
-                        'parse_mode' => 'HTML'
-                    ]);
-                }
-                return;
-            }
-        }
-        // Agent shop products are not a VPN service: the administrator
-        // delivers them by hand. The buyer gets a confirmation and every
-        // administrator receives the details of the payer and of the product.
-        if (preg_match('/^agentshop:([^|]+)\|?(.*)$/s', (string) ($get_invoice['note'] ?? ''), $agentShopMarker)) {
-            $claimAgentShopInvoice = $pdo->prepare("UPDATE invoice SET Status = 'active' WHERE id_invoice = ? AND Status <> 'active'");
-            $claimAgentShopInvoice->execute([$get_invoice['id_invoice']]);
-            clearSelectCache('invoice');
-            if ($claimAgentShopInvoice->rowCount() === 0) {
-                error_log('[DirectPayment] agent shop order already settled id_order=' . $order_id);
-                return;
-            }
-            $agentShopProduct = null;
-            try {
-                $agentShopStmt = $pdo->prepare("SELECT * FROM product WHERE code_product = ? AND agent = 'agentshop' LIMIT 1");
-                $agentShopStmt->execute([trim((string) $agentShopMarker[1])]);
-                $agentShopProduct = $agentShopStmt->fetch(PDO::FETCH_ASSOC) ?: null;
-            } catch (Throwable $e) {
-                error_log('[DirectPayment] agent shop product lookup: ' . $e->getMessage());
-            }
-            $agentShopName = (string) ($agentShopProduct['name_product'] ?? ($get_invoice['name_product'] ?? '—'));
-            $agentShopNote = trim((string) $agentShopMarker[2]);
-            $agentShopBuyerName = trim((string) ($Balance_id['username'] ?? ''));
-            // The customer answers the questions of the shop first, the
-            // administrator gets the answers together with the payment.
-            if (function_exists('nexora_agent_shop_ask_questions') && nexora_agent_shop_ask_questions((string) $get_invoice['id_invoice'], (string) $Balance_id['id'])) {
-                return;
-            }
-            $agentShopBuyerText = ($textbotlang['users']['agentShop']['paid'] ?? "✅ پرداخت شما تایید شد.\nمحصول: {name}\nمبلغ: {price} تومان\n\nاین محصول به صورت دستی برای شما ارسال می‌شود.");
-            $agentShopBuyerText = strtr($agentShopBuyerText, [
-                '{name}' => $agentShopName,
-                '{price}' => number_format($orderPrice),
-            ]);
-            sendmessage($Balance_id['id'], $agentShopBuyerText, null, 'HTML');
-            $agentShopAdminText = "🛒 <b>سفارش فروشگاه نمایندگی</b>\n"
-                . "👤 کاربر: <a href=\"tg://user?id=" . htmlspecialchars((string) $Balance_id['id'], ENT_QUOTES) . "\">" . htmlspecialchars((string) $Balance_id['id'], ENT_QUOTES) . "</a>"
-                . ($agentShopBuyerName !== '' ? " (" . $agentShopBuyerName . ")" : '') . "\n"
-                . "🏷 محصول: " . $agentShopName . "\n"
-                . "💳 مبلغ پرداختی: " . number_format($orderPrice) . " تومان\n"
-                . "🧾 شماره فاکتور: " . $get_invoice['id_invoice'] . "\n"
-                . ($agentShopNote !== '' ? "📝 توضیحات: " . $agentShopNote . "\n" : '');
-            $agentShopPaid = intval($Payment_report['price']);
-            if ($agentShopPaid !== intval($orderPrice)) {
-                $agentShopAdminText .= "ℹ️ مبلغ واقعی پرداختی: " . number_format($agentShopPaid) . " تومان (فرق با قیمت محصول: "
-                    . number_format($agentShopPaid - intval($orderPrice)) . ")\n";
-            }
-            $agentShopAdminText .= "ℹ️ این مبلغ به کیف پول خریدار اضافه نشده است.\n"
-                . "⚠️ این سفارش باید دستی برای خریدار ارسال شود (پیام مستقیم در تلگرام).";
-            if (strlen((string) ($setting['Channel_Report'] ?? '')) > 0) {
-                telegram('sendmessage', [
-                    'chat_id' => $setting['Channel_Report'],
-                    'message_thread_id' => $buyreport,
-                    'text' => $agentShopAdminText,
-                    'parse_mode' => 'HTML'
-                ]);
-            }
-            foreach ((array) $admin_ids as $agentShopAdminId) {
-                if (trim((string) $agentShopAdminId) === '') {
-                    continue;
-                }
-                telegram('sendmessage', [
-                    'chat_id' => $agentShopAdminId,
-                    'text' => $agentShopAdminText,
-                    'parse_mode' => 'HTML'
-                ]);
-            }
-            return;
-        }
-        // Agent panel packages are delivered as an agent login + wallet credit
-        // instead of a VPN service. The id of the product is in the marker of
-        // the note, so an order that was paid is still delivered when the
-        // product was renamed in the meantime.
-        $agentPanelMarker = [];
-        preg_match('/^agentpanelshop:(\d+)\|?(.*)$/s', (string) ($get_invoice['note'] ?? ''), $agentPanelMarker);
-        $agentPanelProduct = null;
-        if (!empty($agentPanelMarker[1])) {
-            $agentPanelProduct = nexora_agent_panel_product_by_id((int) $agentPanelMarker[1]);
-        }
-        if (!$agentPanelProduct) {
-            $agentPanelProduct = nexora_agent_panel_product_by_name($get_invoice['name_product'] ?? '');
-        }
-        if (!$agentPanelProduct && preg_match('/^agentpanelshop:/', (string) ($get_invoice['note'] ?? ''))) {
-            // The product was deleted after the payment. The order can not be
-            // delivered automatically, so the administrator has to do it.
-            $claimAgentInvoice = $pdo->prepare("UPDATE invoice SET Status = 'active' WHERE id_invoice = ? AND Status <> 'active'");
-            $claimAgentInvoice->execute([$get_invoice['id_invoice']]);
-            clearSelectCache('invoice');
-            $agentPanelAdminText = "⚠️ <b>پنل نمایندگی پرداخت شد ولی محصول حذف شده است</b>\n"
-                . "👤 کاربر: " . $Balance_id['id'] . "\n"
-                . "🖥 محصول: " . (string) ($get_invoice['name_product'] ?? '-') . "\n"
-                . "💰 مبلغ: " . number_format($orderPrice) . " تومان\n"
-                . "⚠️ این پنل باید دستی تحویل شود.";
-            sendmessage($Balance_id['id'], "⚠️ پرداخت شما ثبت شد ولی پنل درخواستی در فروشگاه موجود نیست. پشتیبانی تا ۲۴ ساعت آینده پنل شما را تحویل می‌دهد.", null, 'HTML');
-            foreach ((array) $admin_ids as $agentPanelAdminId) {
-                if (trim((string) $agentPanelAdminId) === '') {
-                    continue;
-                }
-                telegram('sendmessage', [
-                    'chat_id' => $agentPanelAdminId,
-                    'text' => $agentPanelAdminText,
-                    'parse_mode' => 'HTML'
-                ]);
-            }
-            return;
-        }
-        if ($agentPanelProduct) {
-            $claimAgentInvoice = $pdo->prepare("UPDATE invoice SET Status = 'active' WHERE id_invoice = ? AND Status <> 'active'");
-            $claimAgentInvoice->execute([$get_invoice['id_invoice']]);
-            clearSelectCache('invoice');
-            if ($claimAgentInvoice->rowCount() === 0) {
-                error_log('[DirectPayment] agent panel order already settled id_order=' . $order_id);
-                return;
-            }
-            $agentCreds = nexora_agent_panel_deliver($agentPanelProduct, (string) $Balance_id['id']);
-            if (empty($agentCreds['ok'])) {
-                // The access of the panel could not be written: the
-                // administrator has to create it by hand.
-                $agentPanelAdminText = "⚠️ <b>پنل نمایندگی پرداخت شد ولی دسترسی ساخته نشد</b>\n"
-                    . "👤 کاربر: " . $Balance_id['id'] . "\n"
-                    . "🖥 محصول: " . $agentPanelProduct['name'] . "\n"
-                    . "💰 مبلغ: " . number_format($orderPrice) . " تومان\n"
-                    . "⚠️ دسترسی پنل نمایندگی را دستی بسازید.";
-                sendmessage($Balance_id['id'], "⚠️ پرداخت شما ثبت شد. دسترسی پنل نمایندگی باید دستی ساخته شود، پشتیبانی تا ۲۴ ساعت آینده آن را برای شما می‌فرستد.", null, 'HTML');
-                foreach ((array) $admin_ids as $agentPanelAdminId) {
-                    if (trim((string) $agentPanelAdminId) === '') {
-                        continue;
-                    }
-                    telegram('sendmessage', [
-                        'chat_id' => $agentPanelAdminId,
-                        'text' => $agentPanelAdminText,
-                        'parse_mode' => 'HTML'
-                    ]);
-                }
-                return;
-            }
-            $agentText = strtr($textbotlang['users']['agentPanelShop']['credentials'], [
-                '{username}' => $agentCreds['username'],
-                '{password}' => $agentCreds['password'],
-                '{link}' => $agentCreds['link'],
-                '{credit}' => number_format($agentCreds['credit']),
-            ]);
-            sendmessage($Balance_id['id'], $agentText, null, 'HTML');
-            $agentReport = "✅ پرداخت پنل نمایندگی تایید شد\n"
-                . "👤 کاربر: " . $Balance_id['id'] . " (" . trim((string) ($Balance_id['username'] ?? '')) . ")\n"
-                . "🖥 پنل: " . $agentPanelProduct['name'] . "\n"
-                . "👤 نام کاربری پنل: " . $agentCreds['username'] . "\n"
-                . "💰 مبلغ: " . number_format($orderPrice) . " تومان\n"
-                . "🎁 اعتبار پنل: " . number_format(floatval($agentPanelProduct['credit'] ?? 0)) . " تومان";
-            if (strlen((string) ($setting['Channel_Report'] ?? '')) > 0) {
-                telegram('sendmessage', [
-                    'chat_id' => $setting['Channel_Report'],
-                    'message_thread_id' => $buyreport,
-                    'text' => $agentReport,
-                    'parse_mode' => 'HTML'
-                ]);
-            }
-            foreach ((array) $admin_ids as $agentPanelAdminId) {
-                if (trim((string) $agentPanelAdminId) === '') {
-                    continue;
-                }
-                telegram('sendmessage', [
-                    'chat_id' => $agentPanelAdminId,
-                    'text' => $agentReport,
-                    'parse_mode' => 'HTML'
-                ]);
-            }
-            return;
-        }
         $stmt = $pdo->prepare("SELECT * FROM product WHERE name_product = :name_product AND (Location = :Service_location  or Location = '/all')");
         $stmt->bindParam(':name_product', $get_invoice['name_product'], PDO::PARAM_STR);
         $stmt->bindParam(':Service_location', $get_invoice['Service_location'], PDO::PARAM_STR);
@@ -2605,100 +2350,20 @@ function outtypepanel($typepanel, $message)
 // ---------------------------------------------------------------------------
 // Agent panel shop: the panels an agent can buy for himself.
 // ---------------------------------------------------------------------------
-function nexora_agent_panel_products($activeOnly = true): array
-{
-    global $pdo;
-    try {
-        $sql = "SELECT * FROM agent_panel_product" . ($activeOnly ? " WHERE status_product = 'active'" : "") . " ORDER BY display_order, id";
-        return $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    } catch (Throwable $e) {
-        error_log('nexora_agent_panel_products: ' . $e->getMessage());
-        return [];
-    }
-}
-function nexora_agent_panel_product_by_name($name): ?array
-{
-    global $pdo;
-    $name = trim((string) $name);
-    if ($name === '') {
-        return null;
-    }
-    try {
-        // The status is not filtered here: an order that was paid must be
-        // delivered even when the product was hidden or deleted afterwards.
-        $st = $pdo->prepare("SELECT * FROM agent_panel_product WHERE name = ? LIMIT 1");
-        $st->execute([$name]);
-        $row = $st->fetch(PDO::FETCH_ASSOC);
-        return $row ?: null;
-    } catch (Throwable $e) {
-        return null;
-    }
-}
-function nexora_agent_panel_product_by_id($id): ?array
-{
-    global $pdo;
-    $id = (int) $id;
-    if ($id <= 0) {
-        return null;
-    }
-    try {
-        $st = $pdo->prepare("SELECT * FROM agent_panel_product WHERE id = ? LIMIT 1");
-        $st->execute([$id]);
-        $row = $st->fetch(PDO::FETCH_ASSOC);
-        return $row ?: null;
-    } catch (Throwable $e) {
-        return null;
-    }
-}
+
+
+
 /**
  * Creates (or re-activates) the agent login of the buyer and credits the
  * wallet that is shown inside the agent panel. Returns the credentials.
  */
-function nexora_agent_panel_deliver(array $product, string $userId): array
-{
-    global $pdo, $domainhosts;
-    $username = trim($userId);
-    $pass = 'Nx' . bin2hex(random_bytes(3));
-    $ok = true;
-    try {
-        // The table of the access is created here as well: a database that was
-        // never migrated must not turn the automatic delivery of the panel
-        // into a manual one.
-        $pdo->exec('CREATE TABLE IF NOT EXISTS agent_auth (id_user VARCHAR(32) NOT NULL PRIMARY KEY, pass_hash VARCHAR(255) NOT NULL, created_at INT UNSIGNED NOT NULL DEFAULT 0) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
-    } catch (Throwable $e) {
-        error_log('nexora_agent_panel_deliver (table): ' . $e->getMessage());
-    }
-    try {
-        $hash = password_hash($pass, PASSWORD_DEFAULT);
-        $st = $pdo->prepare("INSERT INTO agent_auth (id_user, pass_hash, created_at) VALUES (?,?,?) ON DUPLICATE KEY UPDATE pass_hash = VALUES(pass_hash), created_at = VALUES(created_at)");
-        $st->execute([$username, $hash, time()]);
-    } catch (Throwable $e) {
-        error_log('nexora_agent_panel_deliver: ' . $e->getMessage());
-        $ok = false;
-    }
-    $credit = floatval($product['credit'] ?? 0);
-    if ($credit > 0) {
-        addBalance($userId, $credit);
-    }
-    
-    return [
-        'ok' => $ok,
-        'username' => $username,
-        'password' => $pass,
-        'link' => $link,
-        'credit' => $credit,
-    ];
-}
+
 
 /**
  * The link of the agent panel. The domain of the installation is used, so the
  * link is always the one of the running installation.
  */
-function nexora_agent_panel_link(): string
-{
-    global $domainhosts;
-    return '';
-}
+
 
 /**
  * The agent panels that were delivered to the customers.
@@ -2708,80 +2373,18 @@ function nexora_agent_panel_link(): string
  * bought is taken from the invoice of the purchase, so the administrator sees
  * which package the panel belongs to.
  */
-function nexora_agent_panel_accounts(int $limit = 500): array
-{
-    global $pdo;
-    $limit = max(1, min(2000, $limit));
-    $rows = [];
-    try {
-        $st = $pdo->prepare("SELECT a.id_user, a.created_at, u.username, u.Balance, u.register FROM agent_auth a INNER JOIN `user` u ON u.id = a.id_user ORDER BY a.created_at DESC, a.id_user ASC LIMIT " . (int) $limit);
-        $st->execute();
-        $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    } catch (Throwable $e) {
-        error_log('nexora_agent_panel_accounts: ' . $e->getMessage());
-        return [];
-    }
-    $ids = [];
-    foreach ($rows as $row) {
-        $ids[] = (string) ($row['id_user'] ?? '');
-    }
-    // One query for all the packages, so the list does not run a query for
-    // every single panel.
-    $products = nexora_agent_panel_last_products($ids);
-    foreach ($rows as $index => $row) {
-        $rows[$index]['id_user'] = (string) ($row['id_user'] ?? '');
-        $rows[$index]['credit'] = floatval($row['Balance'] ?? 0);
-        $rows[$index]['created_at'] = (int) ($row['created_at'] ?? 0);
-        $rows[$index]['product'] = $products[$rows[$index]['id_user']] ?? '';
-        $rows[$index]['link'] = nexora_agent_panel_link();
-    }
-    return $rows;
-}
+
 
 /**
  * The name of the package of the agent panel shop every customer bought last.
  * The result is a map: the id of the customer => the name of the package.
  */
-function nexora_agent_panel_last_products(array $userIds): array
-{
-    global $pdo;
-    $ids = [];
-    foreach ($userIds as $userId) {
-        $userId = trim((string) $userId);
-        if ($userId !== '' && !in_array($userId, $ids, true)) {
-            $ids[] = $userId;
-        }
-    }
-    if (!$ids) {
-        return [];
-    }
-    $products = [];
-    try {
-        $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $st = $pdo->prepare("SELECT id_user, name_product FROM invoice WHERE id_user IN ($placeholders) AND (note LIKE 'agentpanelshop:%' OR name_product IN (SELECT name FROM agent_panel_product)) ORDER BY time_sell DESC, id_invoice DESC");
-        $st->execute($ids);
-        // The newest invoice of every customer is the first one of the list.
-        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $id = (string) ($row['id_user'] ?? '');
-            if ($id !== '' && !isset($products[$id])) {
-                $products[$id] = trim((string) ($row['name_product'] ?? ''));
-            }
-        }
-    } catch (Throwable $e) {
-        error_log('nexora_agent_panel_last_products: ' . $e->getMessage());
-        return [];
-    }
-    return $products;
-}
+
 
 /**
  * The name of the package of the agent panel shop the customer bought last.
  */
-function nexora_agent_panel_last_product(string $userId): string
-{
-    $products = nexora_agent_panel_last_products([$userId]);
-    return (string) ($products[trim($userId)] ?? '');
-}
+
 
 /**
  * Changes the credit of an agent panel by hand (the web panel of the
@@ -2790,140 +2393,30 @@ function nexora_agent_panel_last_product(string $userId): string
  *
  * Returns the new balance or null when the change was not possible.
  */
-function nexora_agent_panel_set_credit(string $userId, float $amount): ?float
-{
-    global $pdo;
-    $userId = trim($userId);
-    if ($userId === '' || $amount == 0.0) {
-        return null;
-    }
-    try {
-        if ($amount > 0) {
-            $st = $pdo->prepare("UPDATE `user` SET Balance = Balance + ? WHERE id = ?");
-            $st->execute([$amount, $userId]);
-        } else {
-            // The balance never goes below zero.
-            $st = $pdo->prepare("UPDATE `user` SET Balance = Balance + ? WHERE id = ? AND Balance + ? >= 0");
-            $st->execute([$amount, $userId, $amount]);
-            if ($st->rowCount() === 0) {
-                return null;
-            }
-        }
-        clearSelectCache('user');
-        $bal = $pdo->prepare("SELECT Balance FROM `user` WHERE id = ? LIMIT 1");
-        $bal->execute([$userId]);
-        $newBalance = $bal->fetchColumn();
-        return $newBalance === false ? null : floatval($newBalance);
-    } catch (Throwable $e) {
-        error_log('nexora_agent_panel_set_credit: ' . $e->getMessage());
-        return null;
-    }
-}
+
 
 /**
  * Creates a new password for the panel of a customer and returns it. The
  * password is only stored as a hash, so it is shown to the administrator once.
  */
-function nexora_agent_panel_reset_password(string $userId): ?string
-{
-    global $pdo;
-    $userId = trim($userId);
-    if ($userId === '') {
-        return null;
-    }
-    $pass = 'Nx' . bin2hex(random_bytes(3));
-    try {
-        $st = $pdo->prepare("INSERT INTO agent_auth (id_user, pass_hash, created_at) VALUES (?,?,?) ON DUPLICATE KEY UPDATE pass_hash = VALUES(pass_hash), created_at = VALUES(created_at)");
-        $st->execute([$userId, password_hash($pass, PASSWORD_DEFAULT), time()]);
-        return $pass;
-    } catch (Throwable $e) {
-        error_log('nexora_agent_panel_reset_password: ' . $e->getMessage());
-        return null;
-    }
-}
+
 
 /**
  * Takes the panel of a customer away: the access to the panel is deleted, so
  * the customer can not log in any more. The invoices stay untouched, so the
  * history of the payments is not lost.
  */
-function nexora_agent_panel_revoke(string $userId): bool
-{
-    global $pdo;
-    $userId = trim($userId);
-    if ($userId === '') {
-        return false;
-    }
-    try {
-        $st = $pdo->prepare("DELETE FROM agent_auth WHERE id_user = ?");
-        $st->execute([$userId]);
-        return true;
-    } catch (Throwable $e) {
-        error_log('nexora_agent_panel_revoke: ' . $e->getMessage());
-        return false;
-    }
-}
+
 
 // ---------------------------------------------------------------------------
 // Panel top up (شارژ پنل): a separate product list for the agent shop and the
 // agent panel shop. The name and the colour of the top up button itself are
 // stored per shop.
 // ---------------------------------------------------------------------------
-function nexora_topup_shop_key($shop): string
-{
-    $shop = trim((string) $shop);
-    return in_array($shop, ['agentshop', 'agentpanelshop'], true) ? $shop : 'agentshop';
-}
-function nexora_topup_products($shop, $activeOnly = true): array
-{
-    global $pdo;
-    $shop = nexora_topup_shop_key($shop);
-    try {
-        $sql = "SELECT * FROM panel_topup_product WHERE shop = ?" . ($activeOnly ? " AND status_product = 'active'" : "") . " ORDER BY display_order, id";
-        $st = $pdo->prepare($sql);
-        $st->execute([$shop]);
-        return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    } catch (Throwable $e) {
-        error_log('nexora_topup_products: ' . $e->getMessage());
-        return [];
-    }
-}
-function nexora_topup_product_by_id($id): ?array
-{
-    global $pdo;
-    try {
-        $st = $pdo->prepare("SELECT * FROM panel_topup_product WHERE id = ? LIMIT 1");
-        $st->execute([(int) $id]);
-        $row = $st->fetch(PDO::FETCH_ASSOC);
-        return $row ?: null;
-    } catch (Throwable $e) {
-        return null;
-    }
-}
-function nexora_topup_button($shop): array
-{
-    global $pdo, $textbotlang;
-    $shop = nexora_topup_shop_key($shop);
-    $label = trim((string) ($textbotlang['textbot']['topUpButton'] ?? 'Top up'));
-    $style = '';
-    try {
-        $st = $pdo->prepare("SELECT ValuePay FROM PaySetting WHERE NamePay = ?");
-        $st->execute(["nx_topup_label_" . $shop]);
-        $savedLabel = (string) $st->fetchColumn();
-        if (trim($savedLabel) !== '') {
-            $label = trim($savedLabel);
-        }
-        $st->execute(["nx_topup_style_" . $shop]);
-        $savedStyle = trim((string) $st->fetchColumn());
-        $allowed = function_exists('nexora_color_slugs') ? nexora_color_slugs() : [];
-        if ($savedStyle !== '' && in_array($savedStyle, $allowed, true)) {
-            $style = $savedStyle;
-        }
-    } catch (Throwable $e) {
-        error_log('nexora_topup_button: ' . $e->getMessage());
-    }
-    return ['label' => $label, 'style' => $style, 'shop' => $shop];
-}
+
+
+
+
 
 /**
  * The screen of the shop of the reseller panel, exactly as the customer sees
@@ -2934,156 +2427,24 @@ function nexora_topup_button($shop): array
  * top up. The screen is built here once, so the two places can never drift
  * apart.
  */
-function nexora_agent_shop_screen(): array
-{
-    global $pdo, $textbotlang;
-    $items = [];
-    try {
-        $stmt = $pdo->prepare("SELECT * FROM product WHERE agent = 'agentshop' AND status_product = 'active' ORDER BY display_order, id");
-        $stmt->execute();
-        $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    } catch (Throwable $e) {
-        error_log('nexora_agent_shop_screen: ' . $e->getMessage());
-        $items = [];
-    }
-    $rows = [];
-    $showPrice = getShopSetting("statusshowprice")['value'] != "offshowprice";
-    foreach ($items as $item) {
-        $label = (string) $item['name_product'];
-        if ($showPrice) {
-            $label .= " - " . number_format($item['price_product']) . ($textbotlang['common']['labels']['tomanUnit'] ?? '');
-        }
-        $rows[] = [nexora_style_btn($label, "agentshop_select_" . $item['code_product'], $item)];
-    }
-    $rows[] = [['text' => $textbotlang['users']['backbtn'], 'callback_data' => "backuser"]];
-    $topup = nexora_topup_button('agentshop');
-    $rows[] = [nexora_style_btn($topup['label'], "topup_agentshop", ['btn_style' => $topup['style']])];
-    $intro = (string) ($textbotlang['users']['agentShop']['intro'] ?? '');
-    if (!empty($textbotlang['users']['agentShop']['note'])) {
-        $intro .= "\n\n" . $textbotlang['users']['agentShop']['note'];
-    }
-    if (!empty($textbotlang['users']['agentShop']['choose'])) {
-        $intro .= "\n\n" . $textbotlang['users']['agentShop']['choose'];
-    }
-    $intro .= "\n\n" . (string) ($textbotlang['users']['agentShop']['steps'] ?? '');
-    if (!$items) {
-        $intro = ($textbotlang['users']['agentShop']['empty'] ?? '') . "\n\n" . $intro;
-    }
-    return [
-        'text' => $intro,
-        'keyboard' => json_encode(['inline_keyboard' => $rows]),
-        'items' => $items,
-        'topup' => $topup,
-    ];
-}
+
 
 /**
  * The screen of the shop of the agent panel, exactly as the customer sees it
  * in the bot.
  */
-function nexora_agent_panel_shop_screen(): array
-{
-    global $textbotlang;
-    $items = nexora_agent_panel_products(true);
-    $rows = [];
-    $showPrice = getShopSetting("statusshowprice")['value'] != "offshowprice";
-    foreach ($items as $item) {
-        $label = (string) $item['name'];
-        if ($showPrice) {
-            $label .= " - " . number_format($item['price']) . ($textbotlang['common']['labels']['tomanUnit'] ?? '');
-        }
-        $rows[] = [nexora_style_btn($label, "agentpanelshop_select_" . (int) $item['id'], $item)];
-    }
-    $rows[] = [['text' => $textbotlang['users']['backbtn'], 'callback_data' => "backuser"]];
-    $topup = nexora_topup_button('agentpanelshop');
-    $rows[] = [nexora_style_btn($topup['label'], "topup_agentpanelshop", ['btn_style' => $topup['style']])];
-    $intro = (string) ($textbotlang['users']['agentPanelShop']['intro'] ?? '');
-    if (!empty($textbotlang['users']['agentPanelShop']['note'])) {
-        $intro .= "\n\n" . $textbotlang['users']['agentPanelShop']['note'];
-    }
-    if (!empty($textbotlang['users']['agentPanelShop']['choose'])) {
-        $intro .= "\n\n" . $textbotlang['users']['agentPanelShop']['choose'];
-    }
-    $intro .= "\n\n" . (string) ($textbotlang['users']['agentPanelShop']['steps'] ?? '');
-    if (!$items) {
-        $intro = ($textbotlang['users']['agentPanelShop']['empty'] ?? '') . "\n\n" . $intro;
-    }
-    return [
-        'text' => $intro,
-        'keyboard' => json_encode(['inline_keyboard' => $rows]),
-        'items' => $items,
-        'topup' => $topup,
-    ];
-}
-// The panels a customer can charge. For the agent panel shop these are the
-// agent panels the customer already owns, for the agent shop the panels of
+
 // their running services.
-function nexora_user_panels($from_id, $shop = 'agentshop'): array
-{
-    global $pdo;
-    $shop = nexora_topup_shop_key($shop);
-    $panels = [];
-    try {
-        $active = "('active','end_of_time','end_of_volume','sendedwarn','send_on_hold')";
-        if ($shop === 'agentpanelshop') {
-            $stmt = $pdo->prepare("SELECT name_product, MAX(time_sell) AS last_time FROM invoice WHERE id_user = ? AND name_product <> '' AND Status IN $active GROUP BY name_product ORDER BY last_time DESC LIMIT 50");
-            $stmt->execute([$from_id]);
-            foreach ($stmt->fetchAll(PDO::FETCH_NUM) as $row) {
-                $name = trim((string) $row[0]);
-                if ($name !== '' && !in_array($name, $panels, true)) {
-                    $panels[] = $name;
-                }
-            }
-        }
-        if (!$panels) {
-            $stmt = $pdo->prepare("SELECT DISTINCT Service_location FROM invoice WHERE id_user = ? AND Service_location <> '' AND Status IN $active ORDER BY Service_location LIMIT 50");
-            $stmt->execute([$from_id]);
-            foreach ($stmt->fetchAll(PDO::FETCH_NUM) as $row) {
-                $name = trim((string) $row[0]);
-                if ($name !== '' && !in_array($name, $panels, true)) {
-                    $panels[] = $name;
-                }
-            }
-        }
-    } catch (Throwable $e) {
-        error_log('nexora_user_panels: ' . $e->getMessage());
-    }
-    return $panels;
-}
+
 /**
  * The things a customer can charge.
  *
- * For the agent shop these are the products the customer already bought, for
- * the agent panel shop the agent panels the customer already bought. The
  * result is always a list of names, because the top up menu works with the
  * position of the name in the list.
  */
-function nexora_topup_targets(string $userId, string $shop = 'agentshop'): array
-{
-    $shop = nexora_topup_shop_key($shop);
-    if (function_exists('nexora_agent_shop_bought_names')) {
-        // Only the products the customer really bought can be charged.
-        return nexora_agent_shop_bought_names((string) $userId, $shop);
-    }
-    return array_values(nexora_user_panels((string) $userId, $shop));
-}
 
-function nexora_topup_set_button($shop, $label, $style): void{
-    global $pdo;
-    $shop = nexora_topup_shop_key($shop);
-    $label = trim((string) $label);
-    $style = trim((string) $style);
-    $allowed = function_exists('nexora_color_slugs') ? nexora_color_slugs() : [];
-    if ($style !== '' && !in_array($style, $allowed, true)) {
-        $style = '';
-    }
-    $st = $pdo->prepare("INSERT INTO PaySetting (NamePay, ValuePay) VALUES (?,?) ON DUPLICATE KEY UPDATE ValuePay = VALUES(ValuePay)");
-    $st->execute(["nx_topup_label_" . $shop, $label]);
-    $st->execute(["nx_topup_style_" . $shop, $style]);
-    if (function_exists('nexora_clear_table_cache')) {
-        nexora_clear_table_cache('PaySetting');
-    }
-}
+
+
 // Test services: products that are flagged as a test service.
 function nexora_test_products($activeOnly = true): array
 {
@@ -3112,7 +2473,7 @@ function nexora_test_panels(string $agent = 'f', string $userId = ''): array
     try {
         // The agent "*" means every panel of the administrator.
         $agentFilter = ($agent === '*' || $agent === '') ? "" : " AND (agent = ? OR agent = 'all')";
-        $sql = "SELECT * FROM marzban_panel WHERE TestAccount = 'ONTestAccount' AND status = 'active' AND type <> 'nexora_agent'" . $agentFilter . " ORDER BY display_order, id";
+        $sql = "SELECT * FROM marzban_panel WHERE TestAccount = 'ONTestAccount' AND status = 'active'" . $agentFilter . " ORDER BY display_order, id";
         $st = $pdo->prepare($sql);
         $st->execute($agentFilter !== '' ? [$agent] : []);
         $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];

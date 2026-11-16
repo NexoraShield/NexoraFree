@@ -190,17 +190,7 @@ PHP_BIN="$(command -v php)"
 echo "==> Checking PHP syntax"
 "$PHP_BIN" -l "$PACKAGE_DIR/nexora_style.php" >/dev/null
 "$PHP_BIN" -l "$PACKAGE_DIR/migrate.php" >/dev/null
-"$PHP_BIN" -l "$PACKAGE_DIR/panel/btnstyle.php" >/dev/null
-"$PHP_BIN" -l "$PACKAGE_DIR/panel/textemojis.php" >/dev/null
-"$PHP_BIN" -l "$PACKAGE_DIR/panel/emojis.php" >/dev/null
-"$PHP_BIN" -l "$PACKAGE_DIR/" >/dev/null
-"$PHP_BIN" -l "$PACKAGE_DIR/panel/panels.php" >/dev/null
 "$PHP_BIN" -l "$PACKAGE_DIR/panel/health.php" >/dev/null
-"$PHP_BIN" -l "$PACKAGE_DIR/panel/export.php" >/dev/null
-"$PHP_BIN" -l "$PACKAGE_DIR/agent-panel/login.php" >/dev/null
-"$PHP_BIN" -l "$PACKAGE_DIR/agent-panel/index.php" >/dev/null
-"$PHP_BIN" -l "$PACKAGE_DIR/agent-panel/inc/auth.php" >/dev/null
-"$PHP_BIN" -l "$PACKAGE_DIR/agent-panel/inc/shop.php" >/dev/null
 "$PHP_BIN" -l "$PACKAGE_DIR/cronbot/nudge_unpaid.php" >/dev/null
 "$PHP_BIN" -l "$PACKAGE_DIR/cronbot/frenzyex.php" >/dev/null
 "$PHP_BIN" -l "$PACKAGE_DIR/tools/nexora-indexes.php" >/dev/null
@@ -571,20 +561,16 @@ fi
 echo "Backup: $BACKUP_DIR"
 echo
 echo "Next:"
-echo "  1. Open your panel: https://YOUR-DOMAIN/panel/emojis.php"
-echo "     Add emojis manually, or send in bot: /savemoji <name> + premium emoji"
-echo "  2. Open your panel: https://YOUR-DOMAIN/panel/btnstyle.php"
-echo "     Set a color (blue/green/red) and premium emoji per product, category and panel."
+echo "  1. Open your panel: https://YOUR-DOMAIN/panel/"
+echo "  2. Open your panel: https://YOUR-DOMAIN/panel/product.php"
+echo "     Add the products you sell."
 echo "  3. Open your panel: https://YOUR-DOMAIN/panel/panels.php"
-echo "     Edit panels (status, access, limit, color, emoji)."
-echo "  4. Open your panel: https://YOUR-DOMAIN/panel/bottext.php"
-echo "     Use the emoji picker to put premium emoji in ANY bot text."
-echo "  5. Open your panel: https://YOUR-DOMAIN/panel/textemojis.php"
-echo "     Set premium emoji for each main-menu button."
-echo "  7. FrenzyEx gateway: Finance -> Payment settings -> FrenzyEx"
-echo "  8. Optional speed: php tools/nexora-indexes.php"
+echo "     Connect the VPN panels (marzban and the ones with the same api)."
+echo "  4. Open your panel: https://YOUR-DOMAIN/panel/payment.php"
+echo "     Turn the payment gateways on."
+echo "  5. Optional speed: php tools/nexora-indexes.php"
 echo "     Optional unpaid reminders cron: */30 * * * * php BOTDIR/cronbot/nudge_unpaid.php"
-echo "  9. Check the bot and the panel — no restart needed."
+echo "  6. Check the bot and the panel — no restart needed."
 nexora_progress 100
 
 # ── Interactive bot configuration (Nexora) ──

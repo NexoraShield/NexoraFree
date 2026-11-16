@@ -29,15 +29,12 @@ return [
                 'items' => [
                         [
                                 'label' => '按钮：购买代理面板',
-                                'key' => 'textbot.agentShop',
                         ],
                         [
                                 'label' => '按钮：购买代理面板商城',
-                                'key' => 'textbot.agentPanelShop',
                         ],
                         [
                                 'label' => '按钮：代理面板',
-                                'key' => 'textbot.agentPanel',
                         ],
                         [
                                 'label' => '按钮：申请代理',
@@ -251,7 +248,6 @@ return [
 🎁 增加余额：<b>{credit}</b>
 💰 当前余额：<b>{balance}</b> 汤曼',
                 
-    'noPanelBuyAgentPanel' => '⚠️ 您还没有购买代理面板，无法进行充值。\n请先用下面的按钮购买一个代理面板 👇',
     'noPanelBuy' => '⚠️ 您还没有购买代理面板，无法进行充值。\n请先用下面的按钮购买一个面板 👇',
     'selectProduct' => '🛒 您想为哪个商品充值？',
     'successManual' => '✅ 操作已成功，详情已发送给客服。\n\n将在 24 小时内生效。如需加快进度，可以给机器人客服发消息。',],
@@ -272,56 +268,6 @@ return [
 📍 面板：<b>{location}</b>',
                         'buyBtn' => '🧪 获取测试服务',
                 ],
-                'agentPanelShop' => [
-                        'intro' => '🖥 <b>代理面板商店</b>',
-                        'note' => "说明：\n\n🚀 代理面板是简单的波斯语界面，非常适合手动销售\n\n✅ 账号已经以模板形式准备好，每开一个账号都会从您的余额中扣除；余额一旦用完，该账号就会停止工作。与代理商面板不同，这里不是按流量计费。",
-                        'choose' => '请选择下面的面板：',
-                        'empty' => '⭕️ 目前没有可销售给代理的面板。',
-                        'details' => '🖥 <b>{name}</b>
-
-{description}
-
-💰 价格：<b>{price}</b> 汤曼
-🎁 面板内余额：<b>{credit}</b> 汤曼',
-                        'buyBtn' => '🛒 购买并支付',
-                        'backBtn' => '🔙 返回商店',
-                        'steps' => '购买步骤：
-1️⃣ 选择面板
-2️⃣ 查看价格和说明
-3️⃣ 选择支付方式
-4️⃣ 付款后用户名、密码和面板链接会发送到机器人',
-                        'credentials' => '✅ <b>您的代理面板已就绪</b>
-
-👤 用户名：<code>{username}</code>
-🔑 密码：<code>{password}</code>
-🔗 登录链接：{link}
-
-💰 面板钱包余额：<b>{credit}</b> 汤曼',
-                ],
-                'agentShop' => [
-    'paid' => '✅ 您的支付已确认。\n商品：{name}\n金额：{price}  toman\n\n该商品将由管理员手动发送给您。\n💳 支付金额不会充值到您的钱包。',
-                        'intro' => '🛒 <b>代理商面板商店</b>',
-                        'note' => "说明：\n\n📦 本商店的商品由管理员手动发送给您（电报私聊）\n💳 支付金额不会充值到您的钱包",
-                        'choose' => '',
-                        'empty' => '⭕️ 代理面板商店暂时没有商品。',
-                        'details' => '🛍 <b>{name}</b>
-
-{description}
-
-💰 价格：<b>{price}</b> 汤曼
-💾 流量：<b>{volume}</b>
-⏳ 时长：<b>{time}</b> 天
-
-付款后该商品将由管理员手动发送给您。',
-                        'buyBtn' => '🛒 购买并支付',
-                        'backBtn' => '🔙 返回商店',
-                        'steps' => '购买步骤：
-1️⃣ 选择商品
-2️⃣ 查看价格和说明
-3️⃣ 选择支付方式
-4️⃣ 付款后由管理员手动发送商品',
-                    
-    'registered' => '✅ 您的信息已登记，订单已最终确认。\n\n工作人员将在 24 小时内为您设置并交付面板。交付和接收面板请联系客服。',],
                 'Rules' => '✅ 规则已接受。您现在可以使用机器人的服务了。',
                 'SendMessage' => '📩 向用户发送消息',
                 'back' => '您已返回主页！',
@@ -3696,8 +3642,6 @@ f,n.n2',
         ],
         'textbot' => [
                 'topUpButton' => '💳 面板充值',
-                'agentPanelShop' => '🖥 购买代理面板',
-                'agentShop' => '🛒 购买代理面板',
                 'accountWallet' => '🏦 钱包 + 充值',
                 'addBalance' => '💰 增加余额',
                 'affiliates' => '👥 收集下线',
@@ -3734,7 +3678,6 @@ f,n.n2',
 连接链接：
 {config}
 🧑‍🦯 您可以通过按下方按钮并选择您的操作系统来获取连接方法',
-                'agentPanel' => '👨‍💻 代理面板',
                 'agentRequestDesc' => '📌 请发送您的说明以提交代理申请。',
                 'aqayePardakht' => '🔵 Aghaye Pardakht 网关',
                 'botOff' => '❌ 机器人已关闭，请几分钟后再试',
@@ -4328,7 +4271,6 @@ f,n.n2',
                 'zarinPalMerchant' => 'ZarinPal 商户',
                 'zeroBalance' => '0️⃣ 余额清零',
                 'panelSetting' => '🎛 面板设置',
-                'nexoraAgentPanel' => 'nexora 代理',
                 'setGroupName' => '🎛 设置群组名称',
                 'subLinkDomain' => '🔗 订阅链接域名',
                 'panelTypeSanaei' => 'Sanaei 单端口',

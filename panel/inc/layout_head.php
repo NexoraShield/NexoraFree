@@ -152,6 +152,10 @@ $initials = mb_strtoupper(mb_substr($currentUser, 0, 1, 'UTF-8'), 'UTF-8');
             <span class="nav-icon"><?= icon('server') ?></span><span
               class="nav-label"><?= $textbotlang['panel']['layoutMenuSectionFinancial'] ?></span>
           </a>
+          <a href="panels.php" class="nav-item" title="پنل‌های VPN">
+            <span class="nav-icon"><?= icon('server') ?></span><span
+              class="nav-label">پنل‌های VPN</span>
+          </a>
           <a href="product.php" class="nav-item <?= $activeNav === 'product' ? 'active' : '' ?>"
             title="<?= $textbotlang['panel']['layoutPageTitleProduct'] ?>">
             <span class="nav-icon"><?= icon('package') ?></span><span
@@ -197,7 +201,6 @@ $initials = mb_strtoupper(mb_substr($currentUser, 0, 1, 'UTF-8'), 'UTF-8');
             <span class="nav-icon"><?= icon('chart') ?></span><span
               class="nav-label">بررسی حجم/زمان</span>
           </a>
-          <a href="shop.php" class="nav-item <?= $activeNav === 'shop' ? 'active' : '' ?>"
             title="فروشگاه‌های ربات، دقیقاً مثل خود ربات (پنل نمایندگی، پنل اجنت و شارژ آن‌ها)">
             <span class="nav-icon"><?= icon('robot') ?></span><span
               class="nav-label">فروشگاه‌های ربات</span>

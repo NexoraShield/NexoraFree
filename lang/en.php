@@ -29,15 +29,12 @@ To enable it, the bot owner needs a Telegram Premium subscription, or the bot mu
                 'items' => [
                         [
                                 'label' => 'Button: Buy agent panel',
-                                'key' => 'textbot.agentShop',
                         ],
                         [
                                 'label' => 'Button: Buy agent panel shop',
-                                'key' => 'textbot.agentPanelShop',
                         ],
                         [
                                 'label' => 'Button: Agent panel',
-                                'key' => 'textbot.agentPanel',
                         ],
                         [
                                 'label' => 'Button: Agent request',
@@ -251,7 +248,6 @@ Choose the panel that should be charged:',
 🎁 Credit added: <b>{credit}</b>
 💰 Your balance: <b>{balance}</b> Toman',
                 
-    'noPanelBuyAgentPanel' => '⚠️ You have not bought an agent panel yet, so there is nothing to charge.\nPlease get an agent panel first with the button below 👇',
     'noPanelBuy' => '⚠️ You have not bought an agent panel yet, so there is nothing to charge.\nPlease get a panel first with the button below 👇',
     'selectProduct' => '🛒 Which product do you want to charge?',
     'successManual' => '✅ The operation was successful and the details were sent to the support.\n\nIt is applied within 24 hours. To speed things up you can message the support of the bot.',],
@@ -272,56 +268,6 @@ Choose one of the test services:',
 📍 Panel: <b>{location}</b>',
                         'buyBtn' => '🧪 Get the test service',
                 ],
-                'agentPanelShop' => [
-                        'intro' => '🖥 <b>Agent panel shop</b>',
-                        'note' => "Description:\n\n🚀 The agent panel has a simple Persian interface and is great for manual selling\n\n✅ The accounts are ready as templates and every account you open takes its price from your credit; as soon as the credit is gone, that account stops working. Unlike the reseller panel, it is not paid by consumption.",
-                        'choose' => 'Choose one of the panels below:',
-                        'empty' => '⭕️ There is no panel available for the agents yet.',
-                        'details' => '🖥 <b>{name}</b>
-
-{description}
-
-💰 Price: <b>{price}</b> Toman
-🎁 Credit inside the panel: <b>{credit}</b> Toman',
-                        'buyBtn' => '🛒 Buy and pay',
-                        'backBtn' => '🔙 Back to the shop',
-                        'steps' => 'How to buy:
-1️⃣ Choose the panel
-2️⃣ Check the price and the details
-3️⃣ Choose a payment method
-4️⃣ After the payment the username, password and panel link are sent to you',
-                        'credentials' => '✅ <b>Your agent panel is ready</b>
-
-👤 Username: <code>{username}</code>
-🔑 Password: <code>{password}</code>
-🔗 Login link: {link}
-
-💰 Panel wallet credit: <b>{credit}</b> Toman',
-                ],
-                'agentShop' => [
-    'paid' => '✅ Your payment was confirmed.\nProduct: {name}\nAmount: {price} Toman\n\nThis product is delivered to you manually.\n💳 The paid amount is not added to your wallet.',
-                        'intro' => '🛒 <b>Reseller panel shop</b>',
-                        'note' => "Description:\n\n📦 The administrator delivers the products of this shop to you by hand (a direct message in Telegram)\n💳 The paid amount is not added to your wallet",
-                        'choose' => '',
-                        'empty' => '⭕️ There is no product in the agent panel shop yet.',
-                        'details' => '🛍 <b>{name}</b>
-
-{description}
-
-💰 Price: <b>{price}</b> Toman
-💾 Volume: <b>{volume}</b>
-⏳ Duration: <b>{time}</b> days
-
-After the payment the product is delivered to you manually.',
-                        'buyBtn' => '🛒 Buy and pay',
-                        'backBtn' => '🔙 Back to the shop',
-                        'steps' => 'How to buy:
-1️⃣ Choose a product
-2️⃣ Check the price and the details
-3️⃣ Choose a payment method
-4️⃣ The product is delivered to you manually after the payment',
-                    
-    'registered' => '✅ Your details are registered and the order is final.\n\nAn agent sets up your panel and delivers it within 24 hours. For the delivery and the panel please contact the support.',],
                 'Rules' => '✅ The rules have been accepted. You can now use the bot\'s services.',
                 'SendMessage' => '📩 Send message to user',
                 'back' => 'You have returned to the main page!',
@@ -3696,8 +3642,6 @@ Follow the steps above, then send the address below:
         ],
         'textbot' => [
                 'topUpButton' => '💳 Top up the panel',
-                'agentPanelShop' => '🖥 Buy agent panel',
-                'agentShop' => '🛒 Buy agent panel',
                 'accountWallet' => '🏦 Wallet + Top-up',
                 'addBalance' => '💰 Increase balance',
                 'affiliates' => '👥 Referral collection',
@@ -3734,7 +3678,6 @@ Connection link:
 Connection link:
 {config}
 🧑‍🦯 You can get the connection method by pressing the button below and selecting your operating system',
-                'agentPanel' => '👨‍💻 Agency panel',
                 'agentRequestDesc' => '📌 Send your description to submit an agency request.',
                 'aqayePardakht' => '🔵 Aghaye Pardakht gateway',
                 'botOff' => '❌ The bot is off, please check back in a few minutes',
@@ -4328,7 +4271,6 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'setEducationVariza' => 'Variza tutorial',
                 'zeroBalance' => '0️⃣ Reset balance to zero',
                 'panelSetting' => '🎛 Panel Settings',
-                'nexoraAgentPanel' => 'nexora Agent',
                 'setGroupName' => '🎛 Set group name',
                 'subLinkDomain' => '🔗 Subscription link domain',
                 'panelTypeSanaei' => 'Sanaei single port',

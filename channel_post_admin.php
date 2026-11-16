@@ -92,16 +92,6 @@ if (!function_exists('nexora_channel_post_actions')) {
                 'payload' => 'nxcp_test',
                 'trigger' => ['text', (string) ($textbotlang['textbot']['userTest'] ?? '')],
             ],
-            'agentshop' => [
-                'label' => (string) ($textbotlang['textbot']['agentShop'] ?? 'خرید پنل نمایندگی'),
-                'payload' => 'nxcp_agentshop',
-                'trigger' => ['text', (string) ($textbotlang['textbot']['agentShop'] ?? '')],
-            ],
-            'agentpanelshop' => [
-                'label' => (string) ($textbotlang['textbot']['agentPanelShop'] ?? 'خرید پنل پاسارگارد'),
-                'payload' => 'nxcp_agentpanelshop',
-                'trigger' => ['text', (string) ($textbotlang['textbot']['agentPanelShop'] ?? '')],
-            ],
             'wallet' => [
                 'label' => (string) ($textbotlang['textbot']['accountWallet'] ?? 'کیف پول | افزایش موجودی'),
                 'payload' => 'nxcp_wallet',

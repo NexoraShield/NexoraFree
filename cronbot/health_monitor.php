@@ -13,7 +13,7 @@ $textbotlang = languagechange();
 // Check panel health
 // The panel of the agent (اجنت پنل) is the panel of the reseller and not a
 // Marzban panel, so it is not checked here - it would always look broken.
-$stmt = $pdo->prepare("SELECT * FROM marzban_panel WHERE status = 'active' AND type <> 'nexora_agent'");
+$stmt = $pdo->prepare("SELECT * FROM marzban_panel WHERE status = 'active'");
 $stmt->execute();
 $panels = $stmt->fetchAll(PDO::FETCH_ASSOC);
 foreach ($panels as $panel) {

@@ -108,30 +108,7 @@ if (!function_exists('nexora_ensure_emoji_table')) {
     }
 }
 
-if (!function_exists('nexora_emoji_make_slug')) {
-    function nexora_emoji_make_slug(string $name, ?int $excludeId = null): string
-    {
-        $pdo = $GLOBALS['pdo'] ?? null;
-        $slug = function_exists('mb_strtolower') ? mb_strtolower(trim($name), 'UTF-8') : strtolower(trim($name));
-        $slug = preg_replace('/[\s]+/u', '_', $slug);
-        $slug = preg_replace('/[^\p{L}\p{N}_-]+/u', '', (string) $slug);
-        if ($slug === '' || $slug === null) $slug = 'emoji';
-        $slug = function_exists('mb_substr') ? mb_substr($slug, 0, 58, 'UTF-8') : substr($slug, 0, 58);
-        if (!($pdo instanceof PDO)) return $slug;
-        $base = $slug; $try = 0;
-        while ($try < 100) {
-            $candidate = $try === 0 ? $base : $base . '_' . $try;
-            try {
-                $stmt = $pdo->prepare('SELECT id FROM bot_custom_emoji WHERE emoji_slug = ? LIMIT 1');
-                $stmt->execute([$candidate]);
-                $found = (int) ($stmt->fetchColumn() ?: 0);
-            } catch (Throwable $e) { return $candidate; }
-            if ($found === 0 || ($excludeId !== null && $found === $excludeId)) return $candidate;
-            $try++;
-        }
-        return $base . '_' . time();
-    }
-}
+
 
 if (!function_exists('nexora_emoji_list')) {
     function nexora_emoji_list($pdo = null, bool $fresh = false): array
@@ -149,14 +126,7 @@ if (!function_exists('nexora_emoji_lookup')) {
     }
 }
 
-if (!function_exists('nexora_emoji_placeholder')) {
-    function nexora_emoji_placeholder(array $row): string
-    {
-        $slug = trim((string) ($row['emoji_slug'] ?? ''));
-        if ($slug === '') $slug = (string) (int) ($row['id'] ?? 0);
-        return ($slug !== '' && $slug !== '0') ? '{emoji:' . $slug . '}' : '';
-    }
-}
+
 
 if (!function_exists('nexora_emoji_image_url')) {
     /**
@@ -206,74 +176,13 @@ if (!function_exists('nexora_emoji_preview_html')) {    /**
     }
 }
 
-if (!function_exists('nexora_emoji_save')) {    function nexora_emoji_save(string $name, string $customEmojiId, string $emojiUtf8 = '', ?string $createdBy = null): array
-    {
-        $pdo = $GLOBALS['pdo'] ?? null;
-        if (!($pdo instanceof PDO)) return ['ok' => false, 'error' => 'DB unavailable'];
-        $name = trim($name);
-        $customEmojiId = trim($customEmojiId);
-        if ($name === '' || $customEmojiId === '') return ['ok' => false, 'error' => 'نام یا شناسه ایموجی خالی است.'];
-        if (!preg_match('/^\d{1,32}$/', $customEmojiId)) return ['ok' => false, 'error' => 'شناسه ایموجی باید عدد باشد.'];
-        try {
-            $find = $pdo->prepare('SELECT id, emoji_slug FROM bot_custom_emoji WHERE custom_emoji_id = ? LIMIT 1');
-            $find->execute([$customEmojiId]);
-            $existing = $find->fetch(PDO::FETCH_ASSOC);
-            if ($existing) {
-                $slug = trim((string) ($existing['emoji_slug'] ?? ''));
-                if ($slug === '') $slug = nexora_emoji_make_slug($name, (int) $existing['id']);
-                $stmt = $pdo->prepare('UPDATE bot_custom_emoji SET emoji_name = ?, emoji_slug = ?, emoji_utf8 = ? WHERE id = ?');
-                $stmt->execute([$name, $slug, $emojiUtf8, (int) $existing['id']]);
-                return ['ok' => true, 'id' => (int) $existing['id'], 'slug' => $slug];
-            }
-            $slug = nexora_emoji_make_slug($name);
-            $stmt = $pdo->prepare('INSERT INTO bot_custom_emoji (emoji_name, emoji_slug, custom_emoji_id, emoji_utf8, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?)');
-            $stmt->execute([$name, $slug, $customEmojiId, $emojiUtf8, time(), $createdBy]);
-            return ['ok' => true, 'id' => (int) $pdo->lastInsertId(), 'slug' => $slug];
-        } catch (Throwable $e) {
-            error_log('nexora_emoji_save: ' . $e->getMessage());
-            return ['ok' => false, 'error' => 'ذخیره در پایگاه داده ناموفق بود.'];
-        }
-    }
-}
 
-if (!function_exists('nexora_emoji_delete')) {
-    function nexora_emoji_delete(int $id): bool
-    {
-        $pdo = $GLOBALS['pdo'] ?? null;
-        if (!($pdo instanceof PDO) || $id <= 0) return false;
-        try {
-            $stmt = $pdo->prepare('DELETE FROM bot_custom_emoji WHERE id = ?');
-            $stmt->execute([$id]);
-            return $stmt->rowCount() > 0;
-        } catch (Throwable $e) { return false; }
-    }
-}
 
-if (!function_exists('nexora_emoji_rename')) {
-    function nexora_emoji_rename(int $id, string $name): bool
-    {
-        $pdo = $GLOBALS['pdo'] ?? null;
-        $name = trim($name);
-        if (!($pdo instanceof PDO) || $id <= 0 || $name === '') return false;
-        try {
-            $stmt = $pdo->prepare('UPDATE bot_custom_emoji SET emoji_name = ? WHERE id = ?');
-            $stmt->execute([$name, $id]);
-            return $stmt->rowCount() > 0;
-        } catch (Throwable $e) { return false; }
-    }
-}
 
-if (!function_exists('nexora_emoji_chip_meta')) {
-    function nexora_emoji_chip_meta(array $row): array
-    {
-        $name = trim((string) ($row['emoji_name'] ?? ''));
-        $slug = trim((string) ($row['emoji_slug'] ?? ''));
-        $placeholder = nexora_emoji_placeholder($row);
-        $label = $name !== '' ? $name : ($slug !== '' ? $slug : 'emoji');
-        $titleParts = array_filter([$label, ($slug !== '' && $slug !== $name) ? $slug : '', $placeholder]);
-        return ['label' => $label, 'slug' => $slug, 'placeholder' => $placeholder, 'title' => implode(' · ', $titleParts)];
-    }
-}
+
+
+
+
 
 if (!function_exists('nexora_resolve_btn_label')) {
     function nexora_resolve_btn_label(string $raw): array
@@ -493,27 +402,7 @@ if (!function_exists('nexora_apply_menu_emoji')) {
     }
 }
 
-if (!function_exists('nexora_agent_setpass')) {
-    function nexora_agent_setpass(string $id, string $pass): string
-    {
-        $id = trim($id);
-        if (!preg_match('/^\d+$/', $id)) return 'آیدی عددی معتبر نیست.';
-        if (mb_strlen($pass) < 4) return 'رمز حداقل ۴ کاراکتر باشد.';
-        $pdo = $GLOBALS['pdo'] ?? null;
-        if (!($pdo instanceof PDO)) return 'دیتابیس در دسترس نیست.';
-        try {
-            $pdo->exec('CREATE TABLE IF NOT EXISTS agent_auth (id_user VARCHAR(32) NOT NULL PRIMARY KEY, pass_hash VARCHAR(255) NOT NULL, created_at INT UNSIGNED NOT NULL DEFAULT 0) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
-            $hash = password_hash($pass, PASSWORD_DEFAULT);
-            if (!is_string($hash)) return 'خطا در ساخت رمز.';
-            $stmt = $pdo->prepare('INSERT INTO agent_auth (id_user, pass_hash, created_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE pass_hash = VALUES(pass_hash), created_at = VALUES(created_at)');
-            $stmt->execute([$id, $hash, time()]);
-            return '';
-        } catch (Throwable $e) {
-            error_log('nexora_agent_setpass: ' . $e->getMessage());
-            return 'خطای دیتابیس.';
-        }
-    }
-}
+
 
 // === Runtime application of nx_bb_* (color+emoji for keyboard-group buttons) ===
 if (!function_exists('nexora_bb_map')) {
@@ -654,56 +543,9 @@ if (!function_exists('nexora_ensure_shop_tables')) {
      */
     function nexora_ensure_shop_tables(PDO $pdo): void
     {
-        $pdo->exec("CREATE TABLE IF NOT EXISTS agent_panel_product (id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY, name varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL, price varchar(2000) NULL, credit varchar(2000) NULL, description TEXT NULL, btn_style VARCHAR(20) NULL, btn_emoji_id VARCHAR(32) NULL, status_product varchar(20) NOT NULL DEFAULT 'active', display_order INT NOT NULL DEFAULT 0, panel_name varchar(300) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-        $pdo->exec("CREATE TABLE IF NOT EXISTS panel_topup_product (id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY, shop varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'agentshop', name varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL, price varchar(2000) NULL, credit varchar(2000) NULL, description TEXT NULL, unit VARCHAR(32) NULL, btn_style VARCHAR(20) NULL, btn_emoji_id VARCHAR(32) NULL, status_product varchar(20) NOT NULL DEFAULT 'active', display_order INT NOT NULL DEFAULT 0) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-        $pdo->exec("CREATE TABLE IF NOT EXISTS agent_shop_question (id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY, shop varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'agentshop', question varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL, display_order INT NOT NULL DEFAULT 0, status_product varchar(20) NOT NULL DEFAULT 'active', created_at INT UNSIGNED NOT NULL DEFAULT 0, INDEX idx_shop_question (`shop`(50))) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     }
 }
-if (!function_exists('nexora_seed_default_agent_panel_products')) {
-    /**
-     * The ten default packages of the agent panel shop (اجنت پنل): one to ten
-     * million of credit, the price is the same as the credit.
-     */
-    function nexora_seed_default_agent_panel_products(PDO $pdo): void
-    {
-        // The marker makes sure that the defaults are only created once. When
-        // the administrator deletes every product on purpose, they stay
-        // deleted and are not created again.
-        try {
-            $chk = $pdo->prepare("SELECT ValuePay FROM PaySetting WHERE NamePay = ? LIMIT 1");
-            $chk->execute(['nx_seeded_agent_panel_products']);
-            if ((string) $chk->fetchColumn() !== '') {
-                return;
-            }
-        } catch (Throwable $e) {
-            return;
-        }
-        $count = (int) $pdo->query("SELECT COUNT(*) FROM agent_panel_product")->fetchColumn();
-        if ($count === 0) {
-            $digits = ['۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹', '۱۰'];
-            $insert = $pdo->prepare("INSERT INTO agent_panel_product (name, price, credit, description, btn_style, status_product, display_order) VALUES (?,?,?,?,?,'active',?)");
-            $order = 0;
-            foreach ($digits as $digit) {
-                $order++;
-                $credit = $order * 1000000;
-                $insert->execute([
-                    'پنل اجنت نمایندگی با ' . $digit . ' میلیون اعتبار',
-                    $credit,
-                    $credit,
-                    'پنل نمایندگی با ' . $digit . ' میلیون تومان اعتبار داخل کیف پول شما.',
-                    'primary',
-                    $order,
-                ]);
-            }
-        }
-        try {
-            $pdo->prepare("INSERT INTO PaySetting (NamePay, ValuePay) VALUES (?,?) ON DUPLICATE KEY UPDATE ValuePay = VALUES(ValuePay)")
-                ->execute(['nx_seeded_agent_panel_products', '1']);
-        } catch (Throwable $e) {
-            error_log('nexora_seed_default_agent_panel_products: ' . $e->getMessage());
-        }
-    }
-}
+
 if (!function_exists('nexora_self_heal')) {
     function nexora_self_heal(): void {
         static $done = false;
@@ -754,10 +596,8 @@ if (!function_exists('nexora_self_heal')) {
                 }
             });
             $safe(function () use ($pdo) {
-                $pdo->exec('CREATE TABLE IF NOT EXISTS agent_auth (id_user VARCHAR(32) NOT NULL PRIMARY KEY, pass_hash VARCHAR(255) NOT NULL, created_at INT UNSIGNED NOT NULL DEFAULT 0) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
             });
             $safe(function () use ($pdo) {
-                $pdo->exec('CREATE TABLE IF NOT EXISTS agent_login_attempts (ip VARCHAR(64) NOT NULL PRIMARY KEY, attempts INT UNSIGNED NOT NULL DEFAULT 0, first_attempt INT UNSIGNED NOT NULL DEFAULT 0, last_attempt INT UNSIGNED NOT NULL DEFAULT 0) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
             });
             $safe(function () use ($pdo) {
                 $pdo->exec("CREATE TABLE IF NOT EXISTS support_tickets (id INT AUTO_INCREMENT PRIMARY KEY, id_user VARCHAR(32) NOT NULL, subject VARCHAR(255) NOT NULL, message TEXT NOT NULL, status VARCHAR(20) NOT NULL DEFAULT 'open', admin_reply TEXT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, INDEX idx_status (status), INDEX idx_user (id_user)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
@@ -777,7 +617,6 @@ if (!function_exists('nexora_self_heal')) {
                 nexora_ensure_shop_tables($pdo);
             });
             $safe(function () use ($pdo) {
-                nexora_seed_default_agent_panel_products($pdo);
             });
             // The FrenzyEx base URL stays empty on purpose: a fresh install must
             // not point at the gateway of another installation.

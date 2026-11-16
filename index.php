@@ -89,7 +89,7 @@ if (is_array($keyboard_check) && isset($keyboard_check['keyboard'][0][0]['text']
     $keyboardFirstText = $keyboard_check['keyboard'][0][0]['text'];
 }
 if ($keyboardFirstText !== '' && preg_match('/[\x{600}-\x{6FF}\x{FB50}-\x{FDFF}]/u', $keyboardFirstText)) {
-    $keyboardmain = '{"keyboard":[[{"text":"text_sell"},{"text":"text_extend"}],[{"text":"text_usertest"},{"text":"text_wheel_luck"}],[{"text":"text_Purchased_services"},{"text":"accountwallet"}],[{"text":"text_affiliates"},{"text":"text_Tariff_list"}],[{"text":"text_support"},{"text":"text_help"}],[{"text":"text_agentpanel"},{"text":"text_requestagent"}],[{"text":"text_agentshop"}],[{"text":"text_agentpanelshop"}]]}';
+    $keyboardmain = '{"keyboard":[[{"text":"text_sell"},{"text":"text_extend"}],[{"text":"text_usertest"},{"text":"text_wheel_luck"}],[{"text":"text_Purchased_services"},{"text":"accountwallet"}],[{"text":"text_affiliates"},{"text":"text_Tariff_list"}],[{"text":"text_support"},{"text":"text_help"}]]}';
     update("setting", "keyboardmain", $keyboardmain, null, null);
 }
 
@@ -372,21 +372,7 @@ if ((strpos($text, "/start ") !== false || $text == "/start") && $user['step'] !
         // The order is unknown or already paid: the payload is handled like
         // every other start parameter (an invitation code for example).
     }
-    // The web panel of the bot sends the customer to a shop of the bot with a
-    // link: the customer lands right in the shop of the reseller panel or in
-    // the shop of the agent panel, exactly as he sees them in the bot.
-    if (in_array($affiliatesid, ['agentshop', 'agentpanelshop'], true)) {
-        if (!check_active_btn($setting['keyboardmain'], $affiliatesid === 'agentshop' ? "text_agentshop" : "text_agentpanelshop")) {
-            sendmessage($from_id, $textbotlang['users']['buttonDisabled'], null, 'HTML');
-            return;
-        }
-        $shopScreen = ($affiliatesid === 'agentshop')
-            ? nexora_agent_shop_screen()
-            : nexora_agent_panel_shop_screen();
-        sendmessage($from_id, $shopScreen['text'], $shopScreen['keyboard'], 'HTML');
-        step($affiliatesid . '_list', $from_id);
-        return;
-    }
+
     // The messages of the channel carry buttons that bring the customer
     // straight to a part of the bot: the parameter of the link says which
     // button it is. The standard start of the bot comes first: if the
@@ -473,27 +459,6 @@ if ($text == $textbotlang['keyboard']['acceptRules'] or $datain == "acceptrule")
 if ($setting['Bot_Status'] == "botstatusoff" && !in_array($from_id, $admin_ids)) {
     sendmessage($from_id, $textbotlang['textbot']['botOff'], null, 'html');
     return;
-}
-#-----------answers of the reseller shop------------#
-// The answers of the questions of the reseller shop are handled before every
-// other part of the bot: no other branch may swallow them and every answer
-// gets a reaction. The administrator of the bot buys the reseller panel like
-// every other customer, so he answers the questions of the shop too.
-if ($user['step'] == "agentshop_questions" && function_exists('nexora_agent_shop_handle_answer')) {
-    $__nexoraMenuTexts = [];
-    $__nexoraMenu = is_array($keyboard ?? null) ? $keyboard : json_decode((string) ($keyboard ?? ''), true);
-    if (is_array($__nexoraMenu) && isset($__nexoraMenu['keyboard']) && is_array($__nexoraMenu['keyboard'])) {
-        foreach ($__nexoraMenu['keyboard'] as $__nexoraRow) {
-            foreach ((array) $__nexoraRow as $__nexoraButton) {
-                if (is_array($__nexoraButton) && isset($__nexoraButton['text']) && is_string($__nexoraButton['text'])) {
-                    $__nexoraMenuTexts[] = $__nexoraButton['text'];
-                }
-            }
-        }
-    }
-    if (nexora_agent_shop_handle_answer((string) $from_id, (string) $text, $__nexoraMenuTexts)) {
-        return;
-    }
 }
 #-----------/start------------#
 if ($user['joinchannel'] != "active") {
@@ -3503,7 +3468,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
                 ['text' => $textbotlang['keyboard']['appDownloadLink'], 'callback_data' => "linkappdownlod"],
             ];
         }
-        // Custom apps & connection tutorials (from panel/custom_apps.php)
+        // The apps of the bot and the tutorials of the connection
         try {
             $customApps = $pdo->query("SELECT * FROM custom_apps WHERE status = 'active' ORDER BY sort_order ASC, id ASC")->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Throwable $e) { $customApps = []; }
@@ -3812,7 +3777,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     // The panel of the agent (اجنت پنل) is not a panel that sells services:
     // it is the panel of the reseller. It must never show up in the list of
     // the panels a customer can buy a service from.
-    $locationproduct = $pdo->prepare("SELECT * FROM marzban_panel  WHERE status = 'active' AND type <> 'nexora_agent' AND (agent = ? OR agent = 'all') ORDER BY display_order, id");
+    $locationproduct = $pdo->prepare("SELECT * FROM marzban_panel  WHERE status = 'active' AND (agent = ? OR agent = 'all') ORDER BY display_order, id");
     $locationproduct->bindValue(1, $user['agent'], PDO::PARAM_STR);
     $locationproduct->execute();
     if (($locationproduct)->rowCount() == 0) {
@@ -4056,7 +4021,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     if ($setting['statuscategorygenral'] == "oncategorys") {
         savedata("save", "monthproduct", $monthenumber);
         $marzban_list_get = select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "select");
-        $stmt = $pdo->prepare("SELECT * FROM marzban_panel  WHERE status = 'active' AND type <> 'nexora_agent' AND (agent = :mp3 OR agent = 'all') ORDER BY display_order, id");
+        $stmt = $pdo->prepare("SELECT * FROM marzban_panel  WHERE status = 'active' AND (agent = :mp3 OR agent = 'all') ORDER BY display_order, id");
         $stmt->execute([':mp3' => $user['agent']]);
         $count_panel = $stmt->rowCount();
         if ($count_panel == 1) {
@@ -4712,7 +4677,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     }
     // The panel of the agent (اجنت پنل) does not sell services, so it is not
     // in the list of the panels of the bulk buy.
-    $locationproduct = $pdo->prepare("SELECT * FROM marzban_panel WHERE type <> 'nexora_agent' ORDER BY display_order, id");
+    $locationproduct = $pdo->prepare("SELECT * FROM marzban_panel ORDER BY display_order, id");
     $locationproduct->execute();
     if (($locationproduct)->rowCount() == 0) {
         sendmessage($from_id, $textbotlang['users']['sell']['nullPanel'], null, 'HTML');
@@ -6575,353 +6540,6 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         }
     }
     step('home', $from_id);
-} elseif (($text == $textbotlang['textbot']['agentPanel'] || $datain == "agentpanel") && $user['agent'] != "f") {
-    if ($setting['inlinebtnmain'] == "oninline") {
-        Editmessagetext($from_id, $message_id, $textbotlang['users']['agent']['welcome'], $keyboardagent, 'HTML');
-    } else {
-        sendmessage($from_id, $textbotlang['users']['agent']['welcome'], $keyboardagent, 'HTML');
-    }
-} elseif ($text == $textbotlang['users']['agent']['customnameusername'] || $datain == "selectname") {
-    sendmessage($from_id, $textbotlang['users']['selectusername'], $backuser, 'html');
-    step('selectusernamecustom', $from_id);
-} elseif ($user['step'] == "selectusernamecustom") {
-    if (!preg_match('~(?!_)^[a-z][a-z\d_]{2,32}(?<!_)$~i', $text)) {
-        sendmessage($from_id, $textbotlang['users']['invalidusername'], $backuser, 'HTML');
-        return;
-    }
-    sendmessage($from_id, $textbotlang['users']['agent']['usernameSaved'], $keyboardagent, 'html');
-    update("user", "namecustom", $text, "id", $from_id);
-    step("home", $from_id);
-} elseif ($text == $textbotlang['textbot']['requestAgent'] || $datain == "requestagent") {
-    if (!check_active_btn($setting['keyboardmain'], "text_requestagent")) {
-        sendmessage($from_id, $textbotlang['users']['buttonDisabled'], null, 'HTML');
-        return;
-    }
-    if ($user['Balance'] < $setting['agentreqprice']) {
-        $priceagent = number_format($setting['agentreqprice']);
-        sendmessage($from_id, sprintf($textbotlang['users']['agent']['insufficientbalanceagent'], $priceagent), $backuser, 'HTML');
-        return;
-    }
-    $countagentrequest = select("Requestagent", "*", "id", $from_id, "count");
-    if ($countagentrequest != 0) {
-        sendmessage($from_id, $textbotlang['users']['agent']['requestreport'], null, 'html');
-        return;
-    }
-    if ($user['agent'] != "f") {
-        sendmessage($from_id, $textbotlang['users']['agent']['isagent'], null, 'html');
-        return;
-    }
-    if ($datain == "requestagent") {
-        Editmessagetext($from_id, $message_id, $textbotlang['textbot']['agentRequestDesc'], $backuser);
-    } else {
-        sendmessage($from_id, $textbotlang['textbot']['agentRequestDesc'], $backuser, 'html');
-    }
-    step("getagentrequest", $from_id);
-} elseif ($user['step'] == "getagentrequest" && $text) {
-    if (!deductBalance($user, intval($setting['agentreqprice']))) {
-        sendmessage($from_id, $textbotlang['users']['Balance']['notEnoughBalance'], $keyboard, 'HTML');
-        step("home", $from_id);
-        return;
-    }
-    sendmessage($from_id, $textbotlang['users']['agent']['endrequest'], $keyboard, 'html');
-    step("home", $from_id);
-    $stmt = $pdo->prepare("INSERT INTO Requestagent (id, username, time, Description, status, type, price) VALUES (:id, :username, :time, :description, :status, :type, :price)");
-    $status = "waiting";
-    $type = "None";
-    $current_time = time();
-    $description = $text;
-    $requestAgentInserted = false;
-    try {
-        $stmt->execute([
-            ':id' => $from_id,
-            ':username' => $username,
-            ':time' => $current_time,
-            ':description' => $description,
-            ':status' => $status,
-            ':type' => $type,
-            ':price' => intval($setting['agentreqprice']),
-        ]);
-        $requestAgentInserted = true;
-    } catch (PDOException $e) {
-        if (strpos($e->getMessage(), 'Incorrect string value') !== false) {
-            $tableConverted = ensureTableUtf8mb4('Requestagent');
-            if ($tableConverted) {
-                try {
-                    $stmt->execute([
-                        ':id' => $from_id,
-                        ':username' => $username,
-                        ':time' => $current_time,
-                        ':description' => $description,
-                        ':status' => $status,
-                        ':type' => $type,
-                        ':price' => intval($setting['agentreqprice']),
-                    ]);
-                    $requestAgentInserted = true;
-                } catch (PDOException $retryException) {
-                    error_log('Retry after charset conversion failed: ' . $retryException->getMessage());
-                }
-            }
-
-            if (!$requestAgentInserted) {
-                $sanitisedDescription = preg_replace('/[\x{10000}-\x{10FFFF}]/u', '', $description);
-                if ($sanitisedDescription !== $description) {
-                    $stmt->execute([
-                        ':id' => $from_id,
-                        ':username' => $username,
-                        ':time' => $current_time,
-                        ':description' => $sanitisedDescription,
-                        ':status' => $status,
-                        ':type' => $type,
-                    ]);
-                    $requestAgentInserted = true;
-                } else {
-                    throw $e;
-                }
-            }
-        } else {
-            throw $e;
-        }
-    }
-
-    if (!$requestAgentInserted) {
-        throw new RuntimeException('Failed to persist agent request description.');
-    }
-    $textrequestagent = sprintf($textbotlang['users']['agent']['agentRequest'], $from_id, $username, $first_name, $text);
-    $keyboardmanage = json_encode([
-        'inline_keyboard' => [
-            [['text' => $textbotlang['users']['agent']['acceptrequest'], 'callback_data' => "addagentrequest_" . $from_id], ['text' => $textbotlang['users']['agent']['rejectrequest'], 'callback_data' => "rejectrequesta_" . $from_id]],
-            [
-                ['text' => $textbotlang['users']['SendMessage'], 'callback_data' => 'Response_' . $from_id],
-            ],
-        ]
-    ]);
-    foreach ($admin_ids as $admin) {
-        sendmessage($admin, $textrequestagent, $keyboardmanage, 'HTML');
-    }
-} elseif ($text == $textbotlang['textbot']['agentShop'] || $datain == "agentshop") {
-    // ---------------- [ agent panel shop ] ----------------
-    if (!check_active_btn($setting['keyboardmain'], "text_agentshop")) {
-        sendmessage($from_id, $textbotlang['users']['buttonDisabled'], null, 'HTML');
-        return;
-    }
-    $agentScreen = nexora_agent_shop_screen();
-    $agentItems = $agentScreen['items'];
-    $agentKeyboard = $agentScreen['keyboard'];
-    $agentIntro = $agentScreen['text'];
-    if ($datain == "agentshop") {
-        Editmessagetext($from_id, $message_id, $agentIntro, $agentKeyboard, 'HTML');
-    } else {
-        sendmessage($from_id, $agentIntro, $agentKeyboard, 'HTML');
-    }
-    step('agentshop_list', $from_id);
-} elseif (preg_match('/^agentshop_select_([A-Za-z0-9_\-]+)$/', $datain, $dataget)) {
-    $agentCode = (string) $dataget[1];
-    $agentProduct = select("product", "*", "code_product", $agentCode, "select");
-    if (!$agentProduct || $agentProduct['agent'] !== 'agentshop' || $agentProduct['status_product'] !== 'active') {
-        sendmessage($from_id, $textbotlang['users']['agentShop']['empty'], $backuser, 'HTML');
-        return;
-    }
-    $agentDetails = strtr($textbotlang['users']['agentShop']['details'], [
-        '{name}' => (string) $agentProduct['name_product'],
-        '{description}' => (string) ($agentProduct['note'] ?? ''),
-        '{price}' => number_format($agentProduct['price_product']),
-        '{volume}' => (string) $agentProduct['Volume_constraint'],
-        '{time}' => (string) $agentProduct['Service_time'],
-        '{location}' => (string) $agentProduct['Location'],
-    ]);
-    // The note is repeated here, right before the buy button.
-    if (!empty($textbotlang['users']['agentShop']['note'])) {
-        $agentDetails .= "\n\n" . $textbotlang['users']['agentShop']['note'];
-    }
-    $agentKeyboard = json_encode([
-        'inline_keyboard' => [
-            [nexora_style_btn($textbotlang['users']['agentShop']['buyBtn'], "agentshop_buy", $agentProduct)],
-            [['text' => $textbotlang['users']['agentShop']['backBtn'], 'callback_data' => "agentshop"]],
-        ]
-    ]);
-    sendmessage($from_id, $agentDetails, $agentKeyboard, 'HTML');
-    update("user", "Processing_value_one", $agentCode, "id", $from_id);
-    step('agentshop_product', $from_id);
-} elseif ($user['step'] == "agentshop_questions") {
-    // The customer answers the questions of the agent shop. When every question
-    // is answered the order is sent to the administrator. The answers are
-    // handled by a helper, so the same code runs everywhere.
-    if (function_exists('nexora_agent_shop_handle_answer')) {
-        nexora_agent_shop_handle_answer((string) $from_id, (string) $text);
-        return;
-    }
-    $agentQuestions = function_exists('nexora_agent_shop_questions') ? nexora_agent_shop_questions('agentshop') : [];
-    if (!$agentQuestions) {
-        step('home', $from_id);
-        sendmessage($from_id, ($textbotlang['users']['agentShop']['empty'] ?? '⭕️ سوالی برای پرسیدن وجود ندارد.'), $backuser, 'HTML');
-        return;
-    }
-    $agentAnswers = json_decode((string) ($user['Processing_value_four'] ?? '[]'), true);
-    $agentAnswers = is_array($agentAnswers) ? $agentAnswers : [];
-    $agentAnswers[] = (string) $text;
-    update("user", "Processing_value_four", json_encode($agentAnswers, JSON_UNESCAPED_UNICODE), "id", $from_id);
-    $agentNext = count($agentAnswers);
-    if ($agentNext < count($agentQuestions)) {
-        sendmessage($from_id, "❓ سوال " . ($agentNext + 1) . " از " . count($agentQuestions) . ":\n" . strip_tags((string) $agentQuestions[$agentNext]['question']), null, 'HTML');
-        return;
-    }
-    $agentInvoiceId = (string) ($user['Processing_value_tow'] ?? '');
-    // The answers are handed over to the function, because the fields of the
-    // user are cleared right afterwards.
-    if (function_exists('nexora_agent_shop_finish')) {
-        nexora_agent_shop_finish($agentInvoiceId, (string) $from_id, $agentAnswers);
-    }
-    update("user", "Processing_value_tow", '', "id", $from_id);
-    update("user", "Processing_value_four", '', "id", $from_id);
-    step('home', $from_id);
-} elseif ($datain == "agentshop_buy") {
-    $agentCode = (string) $user['Processing_value_one'];
-    $agentProduct = select("product", "*", "code_product", $agentCode, "select");
-    if (!$agentProduct || $agentProduct['agent'] !== 'agentshop' || $agentProduct['status_product'] !== 'active') {
-        sendmessage($from_id, $textbotlang['users']['agentShop']['empty'], $backuser, 'HTML');
-        return;
-    }
-    $agentPrice = floatval($agentProduct['price_product']);
-    if (intval($user['pricediscount']) != 0) {
-        $agentPrice = $agentPrice - (($agentPrice * $user['pricediscount']) / 100);
-        sendmessage($from_id, sprintf($textbotlang['users']['Discount']['discountapplied'], $user['pricediscount']), null, 'HTML');
-    }
-    if ($agentPrice <= 0) {
-        sendmessage($from_id, $textbotlang['users']['common']['invalidInput'], $backuser, 'HTML');
-        return;
-    }
-    $agentRandom = bin2hex(random_bytes(4));
-    if (rowExists("invoice", "id_invoice", $agentRandom)) {
-        $agentRandom = rand(1000000, 9999999) . $agentRandom;
-    }
-    $agentDate = date('Y/m/d H:i:s');
-    $agentNotif = json_encode([
-        'volume' => false,
-        'time' => false,
-    ]);
-    // The product of the reseller shop is not a service of a panel: the
-    // administrator delivers it by hand. There is no panel and no account on a
-    // panel, so the order only carries the name of the product.
-    $agentUsername = 'ag' . $from_id . '_' . substr($agentRandom, 0, 6);
-    $stmt = $pdo->prepare("INSERT IGNORE INTO invoice (id_user, id_invoice, username, time_sell, Service_location, name_product, price_product, Volume, Service_time, Status, note, notifctions) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-    $stmt->execute([
-        $from_id,
-        $agentRandom,
-        $agentUsername,
-        $agentDate,
-        '',
-        $agentProduct['name_product'],
-        $agentPrice,
-        $agentProduct['Volume_constraint'],
-        $agentProduct['Service_time'],
-        'unpaid',
-        // The marker tells the payment handler that this product is delivered
-        // by hand: the administrator gets the details of the buyer.
-        'agentshop:' . $agentProduct['code_product'] . '|' . (string) ($agentProduct['note'] ?? ''),
-        $agentNotif,
-    ]);
-    update("invoice", "payable_amount", $agentPrice, "id_invoice", $agentRandom);
-    update("user", "Processing_value", $agentPrice, "id", $from_id);
-    update("user", "Processing_value_one", $agentRandom, "id", $from_id);
-    sendmessage($from_id, $textbotlang['users']['sell']['noCredit'], $step_payment, 'HTML');
-    step('get_step_payment_buy', $from_id);
-} elseif ($text == $textbotlang['textbot']['agentPanelShop'] || $datain == "agentpanelshop") {
-    // ---------------- [ agent panel shop ] ----------------
-    if (!check_active_btn($setting['keyboardmain'], "text_agentpanelshop")) {
-        sendmessage($from_id, $textbotlang['users']['buttonDisabled'], null, 'HTML');
-        return;
-    }
-    $agentPanelScreen = nexora_agent_panel_shop_screen();
-    $agentPanelItems = $agentPanelScreen['items'];
-    $agentPanelKeyboard = $agentPanelScreen['keyboard'];
-    $agentPanelIntro = $agentPanelScreen['text'];
-    if ($datain == "agentpanelshop") {
-        Editmessagetext($from_id, $message_id, $agentPanelIntro, $agentPanelKeyboard, 'HTML');
-    } else {
-        sendmessage($from_id, $agentPanelIntro, $agentPanelKeyboard, 'HTML');
-    }
-    step('agentpanelshop_list', $from_id);
-} elseif (preg_match('/^agentpanelshop_select_(\d+)$/', $datain, $dataget)) {
-    $agentPanelProduct = null;
-    foreach (nexora_agent_panel_products(true) as $agentPanelRow) {
-        if ((int) $agentPanelRow['id'] === (int) $dataget[1]) {
-            $agentPanelProduct = $agentPanelRow;
-            break;
-        }
-    }
-    if (!$agentPanelProduct) {
-        sendmessage($from_id, $textbotlang['users']['agentPanelShop']['empty'], $backuser, 'HTML');
-        return;
-    }
-    $agentPanelDetails = strtr($textbotlang['users']['agentPanelShop']['details'], [
-        '{name}' => (string) $agentPanelProduct['name'],
-        '{description}' => (string) ($agentPanelProduct['description'] ?? ''),
-        '{price}' => number_format($agentPanelProduct['price']),
-        '{credit}' => number_format($agentPanelProduct['credit']),
-    ]);
-    // The note is repeated here, right before the buy button.
-    if (!empty($textbotlang['users']['agentPanelShop']['note'])) {
-        $agentPanelDetails .= "\n\n" . $textbotlang['users']['agentPanelShop']['note'];
-    }
-    $agentPanelKeyboard = json_encode([
-        'inline_keyboard' => [
-            [nexora_style_btn($textbotlang['users']['agentPanelShop']['buyBtn'], "agentpanelshop_buy", $agentPanelProduct)],
-            [['text' => $textbotlang['users']['agentPanelShop']['backBtn'], 'callback_data' => "agentpanelshop"]],
-        ]
-    ]);
-    sendmessage($from_id, $agentPanelDetails, $agentPanelKeyboard, 'HTML');
-    update("user", "Processing_value_one", (int) $agentPanelProduct['id'], "id", $from_id);
-    step('agentpanelshop_product', $from_id);
-} elseif ($datain == "agentpanelshop_buy") {
-    $agentPanelProduct = null;
-    foreach (nexora_agent_panel_products(true) as $agentPanelRow) {
-        if ((int) $agentPanelRow['id'] === (int) $user['Processing_value_one']) {
-            $agentPanelProduct = $agentPanelRow;
-            break;
-        }
-    }
-    if (!$agentPanelProduct) {
-        sendmessage($from_id, $textbotlang['users']['agentPanelShop']['empty'], $backuser, 'HTML');
-        return;
-    }
-    $agentPanelPrice = floatval($agentPanelProduct['price']);
-    if (intval($user['pricediscount']) != 0) {
-        $agentPanelPrice = $agentPanelPrice - (($agentPanelPrice * $user['pricediscount']) / 100);
-    }
-    if ($agentPanelPrice <= 0) {
-        sendmessage($from_id, $textbotlang['users']['common']['invalidInput'], $backuser, 'HTML');
-        return;
-    }
-    $agentPanelRandom = bin2hex(random_bytes(4));
-    if (rowExists("invoice", "id_invoice", $agentPanelRandom)) {
-        $agentPanelRandom = rand(1000000, 9999999) . $agentPanelRandom;
-    }
-    $agentPanelNotif = json_encode([
-        'volume' => false,
-        'time' => false,
-    ]);
-    $stmt = $pdo->prepare("INSERT IGNORE INTO invoice (id_user, id_invoice, username, time_sell, Service_location, name_product, price_product, Volume, Service_time, Status, note, notifctions) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-    $stmt->execute([
-        $from_id,
-        $agentPanelRandom,
-        $username,
-        date('Y/m/d H:i:s'),
-        '',
-        $agentPanelProduct['name'],
-        $agentPanelPrice,
-        0,
-        0,
-        'unpaid',
-        // The marker tells the payment handler that this order delivers an
-        // agent panel and not a VPN service.
-        'agentpanelshop:' . (int) $agentPanelProduct['id'] . '|' . (string) ($agentPanelProduct['description'] ?? ''),
-        $agentPanelNotif,
-    ]);
-    update("invoice", "payable_amount", $agentPanelPrice, "id_invoice", $agentPanelRandom);
-    update("user", "Processing_value", $agentPanelPrice, "id", $from_id);
-    update("user", "Processing_value_one", $agentPanelRandom, "id", $from_id);
-    sendmessage($from_id, $textbotlang['users']['sell']['noCredit'], $step_payment, 'HTML');
-    step('get_step_payment_buy', $from_id);
 } elseif (preg_match('/^testproduct_((?!get_)[A-Za-z0-9_\-]+)$/', $datain, $dataget)) {
     $testProduct = select("product", "*", "code_product", (string) $dataget[1], "select");
     if (!$testProduct || (int) $testProduct['is_test'] !== 1 || $testProduct['status_product'] !== 'active') {
@@ -7104,125 +6722,6 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     }
     step('home', $from_id);
     update("user", "Processing_value_one", '', "id", $from_id);
-} elseif ($datain == "topup_agentshop" || $datain == "topup_agentpanelshop") {
-    // ---------------- [ panel top up ] ----------------
-    // The customer first chooses the panel that should be charged.
-    $topupShop = $datain === "topup_agentpanelshop" ? 'agentpanelshop' : 'agentshop';
-    $topupPanels = function_exists('nexora_topup_targets') ? nexora_topup_targets((string) $from_id, $topupShop) : nexora_user_panels($from_id, $topupShop);
-    if (!$topupPanels) {
-        // The customer has no panel yet, so the button of the shop is
-        // shown right under the message.
-        $isAgentPanelShop = ($topupShop === 'agentpanelshop');
-        $topupBuyLabel = $isAgentPanelShop
-            ? ($textbotlang['textbot']['agentPanelShop'] ?? '🖥 خرید اجنت پنل')
-            : ($textbotlang['textbot']['agentShop'] ?? '🛒 خرید پنل نمایندگی');
-        $topupBuyCallback = $isAgentPanelShop ? 'agentpanelshop' : 'agentshop';
-        $topupBuyKeyboard = json_encode(['inline_keyboard' => [
-            [['text' => $topupBuyLabel, 'callback_data' => $topupBuyCallback]],
-            [['text' => $textbotlang['users']['backbtn'], 'callback_data' => "backuser"]],
-        ]]);
-        $topupNoPanelText = $isAgentPanelShop
-            ? ($textbotlang['users']['topUp']['noPanelBuyAgentPanel'] ?? "⚠️ شما هنوز هیچ اجنت پنل نمایندگی نخریده‌اید که شارژ انجام بدید.\nلطفاً اول با دکمهٔ پایین یک اجنت پنل تهیه کنید 👇")
-            : ($textbotlang['users']['topUp']['noPanelBuy'] ?? "⚠️ شما هنوز هیچ پنل نمایندگی نخریده‌اید که شارژ انجام بدید.\nلطفاً اول با دکمهٔ پایین یک پنل تهیه کنید 👇");
-        sendmessage($from_id, $topupNoPanelText, $topupBuyKeyboard, 'HTML');
-        return;
-    }
-    $topupRows = [];
-    foreach ($topupPanels as $topupPanelIdx => $topupPanelName) {
-        $topupRows[] = [nexora_style_btn((string) $topupPanelName, "topup_panel_" . $topupShop . "_" . $topupPanelIdx, ['btn_style' => 'primary'])];
-    }
-    $topupRows[] = [['text' => $textbotlang['users']['topUp']['backBtn'], 'callback_data' => $topupShop === 'agentshop' ? "agentshop" : "agentpanelshop"]];
-    $topupIntro = ($textbotlang['users']['topUp']['selectProduct'] ?? "کدام محصول را می‌خواهید شارژ کنید؟");
-    sendmessage($from_id, $topupIntro, json_encode(['inline_keyboard' => $topupRows]), 'HTML');
-    step('topup_select_panel', $from_id);
-} elseif (preg_match('/^topup_panel_(agentshop|agentpanelshop)_(\d+)$/', $datain, $topupMatch)) {
-    $topupShop = nexora_topup_shop_key($topupMatch[1]);
-    $topupPanels = function_exists('nexora_topup_targets') ? nexora_topup_targets((string) $from_id, $topupShop) : nexora_user_panels($from_id, $topupShop);
-    $topupPanelIdx = (int) $topupMatch[2];
-    if (!isset($topupPanels[$topupPanelIdx])) {
-        sendmessage($from_id, $textbotlang['users']['topUp']['noPanel'], $backuser, 'HTML');
-        return;
-    }
-    $topupItems = nexora_topup_products($topupShop);
-    if (!$topupItems) {
-        sendmessage($from_id, $textbotlang['users']['topUp']['empty'], $backuser, 'HTML');
-        return;
-    }
-    $topupRows = [];
-    foreach ($topupItems as $topupItem) {
-        $topupRows[] = [nexora_style_btn((string) $topupItem['name'], "topup_buy_" . $topupShop . "_" . (int) $topupItem['id'] . "_" . $topupPanelIdx, $topupItem)];
-    }
-    $topupRows[] = [['text' => $textbotlang['users']['topUp']['backBtn'], 'callback_data' => "topup_" . $topupShop]];
-    sendmessage($from_id, strtr($textbotlang['users']['topUp']['intro'], ['{panel}' => $topupPanels[$topupPanelIdx]]), json_encode(['inline_keyboard' => $topupRows]), 'HTML');
-    step('topup_list', $from_id);
-} elseif (preg_match('/^topup_buy_(agentshop|agentpanelshop)_(\d+)_(\d+)$/', $datain, $topupMatch)) {
-    $topupShop = nexora_topup_shop_key($topupMatch[1]);
-    $topupItem = nexora_topup_product_by_id((int) $topupMatch[2]);
-    $topupPanels = function_exists('nexora_topup_targets') ? nexora_topup_targets((string) $from_id, $topupShop) : nexora_user_panels($from_id, $topupShop);
-    $topupPanelIdx = (int) $topupMatch[3];
-    if (!$topupItem || $topupItem['shop'] !== $topupShop || $topupItem['status_product'] !== 'active' || !isset($topupPanels[$topupPanelIdx])) {
-        sendmessage($from_id, $textbotlang['users']['topUp']['empty'], $backuser, 'HTML');
-        return;
-    }
-    $topupDetails = strtr($textbotlang['users']['topUp']['details'], [
-        '{name}' => (string) $topupItem['name'],
-        '{description}' => (string) ($topupItem['description'] ?? ''),
-        '{price}' => number_format($topupItem['price']),
-        '{credit}' => number_format($topupItem['credit']),
-        '{panel}' => $topupPanels[$topupPanelIdx],
-    ]);
-    $topupKeyboard = json_encode([
-        'inline_keyboard' => [
-            [nexora_style_btn($textbotlang['users']['topUp']['buyBtn'], "topup_pay_" . $topupShop . "_" . (int) $topupItem['id'] . "_" . $topupPanelIdx, $topupItem)],
-            [['text' => $textbotlang['users']['topUp']['backBtn'], 'callback_data' => "topup_" . $topupShop]],
-        ]
-    ]);
-    sendmessage($from_id, $topupDetails, $topupKeyboard, 'HTML');
-    update("user", "Processing_value_one", $topupShop . ':' . (int) $topupItem['id'] . ':' . $topupPanelIdx, "id", $from_id);
-    step('topup_buy', $from_id);
-} elseif (preg_match('/^topup_pay_(agentshop|agentpanelshop)_(\d+)_(\d+)$/', $datain, $topupMatch)) {
-    $topupShop = nexora_topup_shop_key($topupMatch[1]);
-    $topupItem = nexora_topup_product_by_id((int) $topupMatch[2]);
-    $topupPanels = function_exists('nexora_topup_targets') ? nexora_topup_targets((string) $from_id, $topupShop) : nexora_user_panels($from_id, $topupShop);
-    $topupPanelIdx = (int) $topupMatch[3];
-    if (!$topupItem || $topupItem['shop'] !== $topupShop || $topupItem['status_product'] !== 'active' || !isset($topupPanels[$topupPanelIdx])) {
-        sendmessage($from_id, $textbotlang['users']['topUp']['empty'], $backuser, 'HTML');
-        return;
-    }
-    $topupPrice = floatval($topupItem['price']);
-    if (intval($user['pricediscount']) != 0) {
-        $topupPrice = $topupPrice - (($topupPrice * $user['pricediscount']) / 100);
-    }
-    if ($topupPrice <= 0) {
-        sendmessage($from_id, $textbotlang['users']['common']['invalidInput'], $backuser, 'HTML');
-        return;
-    }
-    $topupRandom = bin2hex(random_bytes(4));
-    if (rowExists("invoice", "id_invoice", $topupRandom)) {
-        $topupRandom = rand(1000000, 9999999) . $topupRandom;
-    }
-    $topupNotif = json_encode(['volume' => false, 'time' => false]);
-    // the note carries the marker so the payment handler knows it is a top up
-    $stmt = $pdo->prepare("INSERT IGNORE INTO invoice (id_user, id_invoice, username, time_sell, Service_location, name_product, price_product, Volume, Service_time, Status, note, notifctions) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-    $stmt->execute([
-        $from_id,
-        $topupRandom,
-        $username,
-        date('Y/m/d H:i:s'),
-        $topupPanels[$topupPanelIdx],
-        $topupItem['name'],
-        $topupPrice,
-        0,
-        0,
-        'unpaid',
-        'topup:' . $topupShop . ':' . (int) $topupItem['id'] . ':' . $topupPanelIdx,
-        $topupNotif,
-    ]);
-    update("invoice", "payable_amount", $topupPrice, "id_invoice", $topupRandom);
-    update("user", "Processing_value", $topupPrice, "id", $from_id);
-    update("user", "Processing_value_one", $topupRandom, "id", $from_id);
-    sendmessage($from_id, $textbotlang['users']['sell']['noCredit'], $step_payment, 'HTML');
-    step('get_step_payment_buy', $from_id);
 } elseif ($text == "/privacy") {
     sendmessage($from_id, $textbotlang['textbot']['rules'], null, 'HTML');
 } elseif ($text == $textbotlang['textbot']['wheelLuck'] || $datain == "wheel_luck" || $text == "/gift") {

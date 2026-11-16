@@ -12,7 +12,7 @@ $cronStatus = json_encode([
     'uptime_node' => false,
     'uptime_panel' => false,
 ]);
-$keyboardMain = '{"keyboard":[[{"text":"text_sell","style":"primary"},{"text":"text_extend","style":"primary"}],[{"text":"text_usertest","style":"primary"},{"text":"text_wheel_luck","style":"primary"}],[{"text":"text_Purchased_services","style":"primary"},{"text":"accountwallet","style":"primary"}],[{"text":"text_affiliates","style":"primary"},{"text":"text_Tariff_list","style":"primary"}],[{"text":"text_support","style":"primary"},{"text":"text_help","style":"primary"}],[{"text":"text_agentpanel","style":"primary"},{"text":"text_requestagent","style":"primary"}],[{"text":"text_agentshop","style":"primary"}],[{"text":"text_agentpanelshop","style":"primary"}]]}';
+$keyboardMain = '{"keyboard":[[{"text":"text_sell","style":"primary"},{"text":"text_extend","style":"primary"}],[{"text":"text_usertest","style":"primary"},{"text":"text_wheel_luck","style":"primary"}],[{"text":"text_Purchased_services","style":"primary"},{"text":"accountwallet","style":"primary"}],[{"text":"text_affiliates","style":"primary"},{"text":"text_Tariff_list","style":"primary"}],[{"text":"text_support","style":"primary"},{"text":"text_help","style":"primary"}]]}';
 
 return [
     'create' => <<<SQL
@@ -37,7 +37,6 @@ return [
         statusnamecustom varchar(100) NULL,
         statuscategorygenral varchar(100) NULL,
         statussupportpv varchar(100) NULL,
-        agentreqprice varchar(100) NULL,
         bulkbuy varchar(100) NULL,
         on_hold_day varchar(100) NULL,
         cronvolumere varchar(100) NULL,
@@ -88,7 +87,6 @@ return [
             'statussupportpv' => 'offpvsupport',
             'statusnamecustom' => 'offnamecustom',
             'statuscategorygenral' => 'offcategorys',
-            'agentreqprice' => '0',
             'cronvolumere' => '5',
             'bulkbuy' => 'onbulk',
             'on_hold_day' => '4',
@@ -135,7 +133,6 @@ return [
         ['statusnamecustom', 'offnamecustom', 'VARCHAR(100)'],
         ['statuscategorygenral', 'offcategorys', 'VARCHAR(100)'],
         ['statussupportpv', 'offpvsupport', 'VARCHAR(100)'],
-        ['agentreqprice', '0', 'VARCHAR(100)'],
         ['bulkbuy', 'onbulk', 'VARCHAR(100)'],
         ['on_hold_day', '4', 'VARCHAR(100)'],
         ['cronvolumere', '5', 'VARCHAR(100)'],
