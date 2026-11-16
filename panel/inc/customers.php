@@ -131,7 +131,7 @@ function nexora_customer_from_site(): ?array
         return null;
     }
     $remote = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
-    if (!$nexora_customer_is_local($remote)) {
+    if (!nexora_customer_is_local($remote)) {
         return null;
     }
     $keyFile = dirname(__DIR__) . '/panel.key';

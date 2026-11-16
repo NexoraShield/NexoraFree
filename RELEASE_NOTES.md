@@ -1,5 +1,12 @@
 # Nexora Bot — Release Notes
 
+## v1.23.07 (2026-11-16) — The check of the address of the request is fixed
+
+- The customers of the site come in the panel of the bot again (the check of the address had a typo and the page did not open).
+
+---
+
+
 ## v1.23.06 (2026-11-16) — The customers of the site come in the panel of the bot
 
 - The page of the customer of the site opens in the panel of the bot (the site sends the customer with a signature; the panel only trusts the requests that come from the machine of the hub).
