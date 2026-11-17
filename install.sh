@@ -7,6 +7,9 @@ MANIFEST="$PACKAGE_DIR/manifest.sha256"
 
 TARGET=""
 FORCE=0
+FRESH_INSTALL=0
+# Legacy placeholder kept for the summary at the bottom (never assigned any more).
+_skipped_patches=""
 
 usage() {
   cat <<'USAGE'
@@ -162,6 +165,50 @@ if [[ -z "$TARGET" ]]; then
   done < <(find . -type f -not -name 'install.sh' -not -name 'migrate.php' -not -name 'uninstall.sh' -not -name 'manifest.sha256' -not -name 'README.md' -not -name 'patch_*.php' -not -path './install/*' -print0)
   cd "$TARGET"
   echo "    Fresh installation created at $TARGET" >&3
+  FRESH_INSTALL=1
+fi
+
+# ── A brand-new server: provision the database ──────────────────────────
+# A fresh public installation cannot inherit a ready config the way the
+# fleet installer does (there the hub writes config.php before the run).
+# When the local MariaDB/MySQL answers on the root unix socket (the default
+# on Ubuntu and Debian) the database and the user of the bot are created
+# here, so the one-line command works on a blank server. Otherwise the exact
+# steps are printed and the run stops before the migration with the same
+# instructions instead of a low-level PDO error. Installations that already
+# have a filled config.php are never touched by this block.
+if [[ "$FRESH_INSTALL" == "1" ]] && grep -q '{database_url}' "$TARGET/config.php" 2>/dev/null; then
+  _db_name=nexorabot
+  _db_user=nexorabot
+  if command -v mysql >/dev/null 2>&1 && mysql -u root -e 'SELECT 1' >/dev/null 2>&1; then
+    _db_pass="$(openssl rand -hex 12 2>/dev/null || tr -dc 'a-f0-9' </dev/urandom | head -c 24)"
+    if ! mysql -u root <<EOSQL >/tmp/nexora_install.log 2>&1
+CREATE DATABASE IF NOT EXISTS nexorabot CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'nexorabot'@'localhost' IDENTIFIED BY '${_db_pass}';
+ALTER USER 'nexorabot'@'localhost' IDENTIFIED BY '${_db_pass}';
+GRANT ALL PRIVILEGES ON nexorabot.* TO 'nexorabot'@'localhost';
+FLUSH PRIVILEGES;
+EOSQL
+    then
+      echo "    WARNING: the database could not be created automatically (see /tmp/nexora_install.log)" >&3
+      exit 1
+    else
+      sed -i -e "s|{database_url}|localhost|" -e "s|{database_name}|${_db_name}|" -e "s|{username_db}|${_db_user}|" -e "s|{password_db}|${_db_pass}|" "$TARGET/config.php"
+      echo "    database '${_db_name}' and user '${_db_user}' created; credentials written to $TARGET/config.php" >&3
+    fi
+  else
+    {
+      echo ""
+      echo "!!! The config of the bot still has placeholder database settings."
+      echo "    No root access to MariaDB/MySQL on the unix socket was found."
+      echo "    Create a database by hand, e.g.:"
+      echo "      apt install mariadb-server"
+      echo "      mysql -u root -e \"CREATE DATABASE nexorabot CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; CREATE USER 'nexorabot'@'localhost' IDENTIFIED BY 'CHANGE-ME'; GRANT ALL ON nexorabot.* TO 'nexorabot'@'localhost'; FLUSH PRIVILEGES;\""
+      echo "    Then fill \$dbhost, \$dbname, \$usernamedb and \$passworddb in $TARGET/config.php and re-run this command."
+      echo ""
+    } >&3
+    exit 1
+  fi
 fi
 
 TARGET="$(cd -- "$TARGET" 2>/dev/null && pwd)" || {

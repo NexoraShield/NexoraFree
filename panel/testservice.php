@@ -149,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
                         ]
                     );
                     $newId = (int) $pdo->lastInsertId();
-                    db_query($pdo, "UPDATE product SET display_order = id WHERE id = ?", [$newId, $newId]);
+                    db_query($pdo, "UPDATE product SET display_order = id WHERE id = ?", [$newId]);
                     flash('success', 'سرویس تست اضافه شد.');
                 } else {
                     $id = (int) ($_POST['edit_id'] ?? 0);

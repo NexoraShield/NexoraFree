@@ -10,8 +10,14 @@ class MikrotikPanelDriver extends BasePanelDriver
         $usernameC = $vars['usernameC'];
         $Output = $vars['Output'];
         $password = bin2hex(random_bytes(6));
+        // panel_protocol stores proxies as a JSON array (["profile"]); the
+        // MikroTik user-manager profile is a single string.
         $name_group = $Get_Data_Panel['proxies'];
-        if ($Get_Data_Product['inbounds'] != null) {
+        $decoded_group = is_string($name_group) ? json_decode($name_group, true) : null;
+        if (is_array($decoded_group) && count($decoded_group) === 1 && is_string($decoded_group[0])) {
+            $name_group = $decoded_group[0];
+        }
+        if (is_array($Get_Data_Product) && ($Get_Data_Product['inbounds'] ?? null) != null) {
             $name_group = $Get_Data_Product['inbounds'];
         } elseif ($code_product == "usertest") {
             $name_group = "usertest";
@@ -19,7 +25,7 @@ class MikrotikPanelDriver extends BasePanelDriver
         $data_Output = addUser_mikrotik($Get_Data_Panel['name_panel'], $usernameC, $password, $name_group);
         if (isset($data_Output['error'])) {
             $Output['status'] = 'Unsuccessful';
-            $Output['msg'] = $data_Output['msg'];
+            $Output['msg'] = $data_Output['error'] ?? 'panel error';
         } else {
             $Output['status'] = 'successful';
             $Output['username'] = $usernameC;
@@ -43,10 +49,16 @@ class MikrotikPanelDriver extends BasePanelDriver
             );
         } else {
             $invocie = select("invoice", "*", "username", $username, "select");
+            if (!is_array($invocie)) {
+                return array(
+                    'status' => 'Unsuccessful',
+                    'msg' => 'invoice not found'
+                );
+            }
             $traffic_get = GetUsermikrotik_volume($Get_Data_Panel['name_panel'], $UsernameData['.id']);
-            $used_traffic = $traffic_get['total-upload'] + $traffic_get['total-download'];
-            $data_limit = $invocie['Volume'] * pow(1024, 3);
-            $expire = $invocie['time_sell'] + ($invocie['Service_time'] * 86400);
+            $used_traffic = ($traffic_get['total-upload'] ?? 0) + ($traffic_get['total-download'] ?? 0);
+            $data_limit = ($invocie['Volume'] ?? 0) * pow(1024, 3);
+            $expire = strtotime((string) ($invocie['time_sell'] ?? '')) + ((int) ($invocie['Service_time'] ?? 0) * 86400);
             $UsernameData['enable'] = "active";
             $Output = array(
                 'status' => $UsernameData['enable'],

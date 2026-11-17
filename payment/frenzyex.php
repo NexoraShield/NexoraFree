@@ -36,12 +36,15 @@ $priceCurrency = strtoupper(trim((string) ($payload['price_currency'] ?? '')));
 $priceAmount = $payload['price_amount'] ?? null;
 if ($priceCurrency !== 'TMN' || !is_numeric($priceAmount) || abs((float) $priceAmount - (float) $payment['price']) > 0.001) { error_log('[frenzyex-callback] amount mismatch order=' . $orderId); frenzyex_callback_response(409, ['ok' => false, 'error' => 'amount_mismatch']); }
 if (($payment['payment_Status'] ?? '') === 'paid') frenzyex_callback_response(200, ['ok' => true, 'duplicate' => true, 'order_id' => $orderId]);
-if (in_array(($payment['payment_Status'] ?? ''), ['reject', 'expire'], true)) frenzyex_callback_response(409, ['ok' => false, 'error' => 'order_closed']);
+// Late paid callbacks are honoured (verified by FrenzyEx), even for orders
+// the housekeeping marked expired — see docs/PAYMENT.md and the FrenzyEx
+// merchant guide v5. 'reject' (admin rejection) still blocks delivery.
+if (($payment['payment_Status'] ?? '') === 'reject') frenzyex_callback_response(409, ['ok' => false, 'error' => 'order_closed']);
 if (!claimPaymentPaid($orderId)) { frenzyex_callback_response(200, ['ok' => true, 'duplicate' => true, 'order_id' => $orderId]); }
 $ManagePanel = new ManagePanel();
 $setting = select('setting', '*');
 $textbotlang = languagechange();
-try { $processed = DirectPayment($orderId, __DIR__ . '/../images.jpg'); } catch (Throwable $e) { error_log('[frenzyex-callback] processing exception order=' . $orderId . ' error=' . $e->getMessage()); frenzyex_callback_response(500, ['ok' => false, 'error' => 'processing_failed']); }
+try { $processed = DirectPayment($orderId, __DIR__ . '/../images.jpg'); } catch (Throwable $e) { error_log('[frenzyex-callback] processing exception order=' . $orderId . ' error=' . $e->getMessage()); reportDirectPaymentFailure($orderId, $e->getMessage()); frenzyex_callback_response(500, ['ok' => false, 'error' => 'processing_failed']); }
 if (!$processed) {
     $check = $pdo->prepare('SELECT payment_Status FROM Payment_report WHERE id_order = ? LIMIT 1');
     $check->execute([$orderId]);
@@ -51,12 +54,12 @@ $paymentreports = select("topicid", "idreport", "report", "paymentreport", "sele
 $Balance_id = select("user", "*", "id", $payment['id_user'], "select");
 $pricecashback = select("PaySetting", "ValuePay", "NamePay", "cashbackfrenzyex", "select")['ValuePay'];
 if ($pricecashback != "0") {
-    $result = ($payment['price'] * $pricecashback) / 100;
-    $Balance_confrim = intval($Balance_id['Balance']) + $result;
-    update("user", "Balance", $Balance_confrim, "id", $Balance_id['id']);
-    $pricecashback = number_format($pricecashback);
-    $text_report = sprintf($textbotlang['paymentGateway']['giftReport'], $result);
-    sendmessage($Balance_id['id'], $text_report, null, 'HTML');
+    $cashback = (int) round(((float) $payment['price'] * (float) $pricecashback) / 100);
+    if ($cashback > 0) {
+        addBalance($Balance_id['id'], $cashback);
+        $text_report = sprintf($textbotlang['paymentGateway']['giftReport'], $cashback);
+        sendmessage($Balance_id['id'], $text_report, null, 'HTML');
+    }
 }
 $text_reportpayment = sprintf($textbotlang['paymentGateway']['reportFrenzyEx'] ?? "پرداخت FrenzyEx موفق\nکاربر: %s\nآیدی: %s\nمبلغ: %s تومان", $Balance_id['username'], $Balance_id['id'], $payment['price']);
 if (strlen((string)($setting['Channel_Report'] ?? '')) > 0) {

@@ -7,14 +7,14 @@ if ($target === '' || !is_dir($target)) {
         if (is_dir($c) && is_file($c . '/config.php')) { $target = $c; break; }
     }
 }
-if ($target === '' || !is_dir($target)) { fwrite(STDERR, "Target directory not found.\n"); exit(1); }
+if ($target === '' || !is_dir($target)) { fwrite(STDERR, "Target directory not found.\n"); return; }
 $configFile = $target . '/config.php';
 $helperFile = dirname(__DIR__) . '/nexora_style.php';
-if (!is_file($configFile)) { fwrite(STDERR, "config.php not found.\n"); exit(1); }
-if (!is_file($helperFile)) { fwrite(STDERR, "nexora_style.php not found.\n"); exit(1); }
+if (!is_file($configFile)) { fwrite(STDERR, "config.php not found.\n"); return; }
+if (!is_file($helperFile)) { fwrite(STDERR, "nexora_style.php not found.\n"); return; }
 require $configFile;
 require $helperFile;
-if (!isset($pdo) || !($pdo instanceof PDO)) { fwrite(STDERR, "DB connection not available.\n"); exit(1); }
+if (!isset($pdo) || !($pdo instanceof PDO)) { fwrite(STDERR, "DB connection not available.\n"); return; }
 $textbotlang = function_exists('languagechange') ? languagechange() : [];
 $now = time();
 $warned = 0;
@@ -38,6 +38,6 @@ try {
     }
 } catch (Throwable $e) {
     fwrite(STDERR, "check_volumes failed: " . $e->getMessage() . "\n");
-    exit(1);
+    return;
 }
 echo "Checked volumes. Warnings sent: $warned\n";

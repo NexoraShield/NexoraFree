@@ -195,8 +195,12 @@ class HiddifyPanelDriver extends BasePanelDriver
 
     public function resetUsage(array $vars)
     {
+        // Hiddify has no traffic-reset endpoint wired up in this driver.
+        // Reporting success would silently skip the reset while telling the
+        // buyer the volume was renewed.
         return array(
-            'status' => true
+            'status' => false,
+            'msg' => 'reset usage is not supported by this panel'
         );
     }
 

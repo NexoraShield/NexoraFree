@@ -25,9 +25,8 @@ if (!is_array($Payment_reports) || $Payment_reports['Payment_Method'] !== "Curre
     http_response_code(404);
     exit('order not found');
 }
-if ($Payment_reports['payment_Status'] == "expire") {
-    exit('order expired');
-}
+// Late payment on an expired order is honoured (money was received).
+// 'reject' keeps blocking delivery.
 $invoice_id = $Payment_reports['id_order'];
 $price = $Payment_reports['price'];
 // verify Transaction
@@ -67,16 +66,18 @@ if ($StatusPayment == 100) {
                 DirectPayment($invoice_id, "../images.jpg");
             } catch (Throwable $directPaymentError) {
                 error_log("DirectPayment failed for order {$invoice_id}: " . $directPaymentError->getMessage());
+                reportDirectPaymentFailure($invoice_id, $directPaymentError->getMessage());
                 return;
             }
             $pricecashback = select("PaySetting", "ValuePay", "NamePay", "chashbackiranpay1", "select")['ValuePay'];
             $Balance_id = select("user", "*", "id", $Payment_report['id_user'], "select");
             if ($pricecashback != "0") {
-                $result = ($Payment_report['price'] * $pricecashback) / 100;
-                $Balance_confrim = intval($Balance_id['Balance']) + $result;
-                update("user", "Balance", $Balance_confrim, "id", $Balance_id['id']);
+                $cashback = (int) round(((float) $Payment_report['price'] * (float) $pricecashback) / 100);
+                if ($cashback > 0) {
+                    addBalance($Balance_id['id'], $cashback);
+                }
                 $pricecashback = number_format($pricecashback);
-                $text_report = sprintf($textbotlang['paymentGateway']['giftReport'], $result);
+                $text_report = sprintf($textbotlang['paymentGateway']['giftReport'], $cashback);
                 sendmessage($Balance_id['id'], $text_report, null, 'HTML');
             }
             $paymentreports = select("topicid", "idreport", "report", "paymentreport", "select")['idreport'];

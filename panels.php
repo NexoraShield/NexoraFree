@@ -132,6 +132,12 @@ class ManagePanel
     {
         $Output = array();
         $Get_Data_Panel = select("marzban_panel", "*", "name_panel", $name_panel, "select");
+        if (!is_array($Get_Data_Panel)) {
+            return array(
+                'status' => 'Unsuccessful',
+                'msg' => 'Panel Not Found'
+            );
+        }
         $driver = PanelRegistry::driver($Get_Data_Panel['type'], $this);
         if ($driver !== null && ($result = $driver->revokeSub(get_defined_vars())) !== BasePanelDriver::UNSUPPORTED) {
             return $this->splitWireguardLinks($Get_Data_Panel, $result);
@@ -146,6 +152,12 @@ class ManagePanel
     {
         $Output = array();
         $Get_Data_Panel = select("marzban_panel", "*", "name_panel", $name_panel, "select");
+        if (!is_array($Get_Data_Panel)) {
+            return array(
+                'status' => 'Unsuccessful',
+                'msg' => 'Panel Not Found'
+            );
+        }
         $driver = PanelRegistry::driver($Get_Data_Panel['type'], $this);
         if ($driver !== null && ($result = $driver->remove(get_defined_vars())) !== BasePanelDriver::UNSUPPORTED) {
             return $result;
@@ -159,15 +171,31 @@ class ManagePanel
     function Modifyuser($username, $name_panel, $config = array())
     {
         $Get_Data_Panel = select("marzban_panel", "*", "name_panel", $name_panel, "select");
+        if (!is_array($Get_Data_Panel)) {
+            return array(
+                'status' => 'Unsuccessful',
+                'msg' => 'Panel Not Found'
+            );
+        }
         $driver = PanelRegistry::driver($Get_Data_Panel['type'], $this);
         if ($driver !== null && ($result = $driver->modify(get_defined_vars())) !== BasePanelDriver::UNSUPPORTED) {
             return $result;
         }
+        return array(
+            'status' => 'Unsuccessful',
+            'msg' => 'not supported'
+        );
     }
     function Change_status($username, $name_panel)
     {
         $DataUserOut = $this->DataUser($name_panel, $username);
         $Get_Data_Panel = select("marzban_panel", "*", "name_panel", $name_panel, "select");
+        if (!is_array($Get_Data_Panel)) {
+            return array(
+                'status' => 'Unsuccessful',
+                'msg' => 'Panel Not Found'
+            );
+        }
         if ($DataUserOut['status'] == "Unsuccessful") {
             return array(
                 'status' => 'Unsuccessful',
@@ -185,7 +213,10 @@ class ManagePanel
             return $result;
         }
 
-        return $Output;
+        return array(
+            'status' => 'Unsuccessful',
+            'msg' => 'not supported'
+        );
     }
     function ResetUserDataUsage($username, $name_panel)
     {
@@ -200,6 +231,10 @@ class ManagePanel
         if ($driver !== null && ($result = $driver->resetUsage(get_defined_vars())) !== BasePanelDriver::UNSUPPORTED) {
             return $result;
         }
+        return array(
+            'status' => false,
+            'msg' => 'not supported'
+        );
     }
     function extend($Method_extend, $new_limit, $time_day, $username, $code_product, $name_panel)
     {
@@ -208,7 +243,7 @@ class ManagePanel
         $invoice = select("invoice", "*", "username", $username, "select");
         if ($code_product == "custom_volume")
             $product = true;
-        if ($panel == false || $product == false) {
+        if ($panel == false || $product == false || !is_array($invoice)) {
             return array(
                 'status' => false,
                 'msg' => 'data not found'
@@ -237,7 +272,9 @@ class ManagePanel
         //inboud and proxies 
         $inbound_id = isset($panel['inboundid']) ? $panel['inboundid'] : 1;
         $inbounds = is_string($panel['inbounds']) ? json_decode($panel['inbounds']) : "{}";
-        $inbounds = $product['inbounds'] != null ? json_decode($product['inbounds']) : $inbounds;
+        if (is_array($product) && $product['inbounds'] != null) {
+            $inbounds = json_decode($product['inbounds']);
+        }
         if ($panel['type'] != "WGDashboard") {
             update("invoice", 'user_info', null, "username", $username);
         }
@@ -283,7 +320,7 @@ class ManagePanel
         if ($driver !== null && ($result = $driver->extendService(get_defined_vars())) !== BasePanelDriver::UNSUPPORTED) {
             return $result;
         }
-        $extend = $this->Modifyuser($username, $panel['name_panel'], $data);
+        $extend = $this->Modifyuser($username, $panel['name_panel'], array());
         if ($extend['status'] == false) {
             return array(
                 'status' => false,
@@ -296,13 +333,13 @@ class ManagePanel
     {
         $panel = select("marzban_panel", "*", "code_panel", $code_panel, "select");
         $invoice = select("invoice", "*", "username", $username_account, "select");
-        if ($panel == false) {
+        if ($panel == false || !is_array($invoice)) {
             return array(
                 'status' => false,
                 'msg' => 'data not found'
             );
         }
-        $notif_value = json_decode($invoice['notifctions'], true);
+        $notif_value = json_decode($invoice['notifctions'], true) ?: ['volume' => false, 'time' => false];
         $notifctions = json_encode(array(
             'volume' => false,
             'time' => $notif_value['time'],
@@ -328,7 +365,7 @@ class ManagePanel
         if ($driver !== null && ($result = $driver->extraVolume(get_defined_vars())) !== BasePanelDriver::UNSUPPORTED) {
             return $result;
         }
-        $extra_volume = $this->Modifyuser($username_account, $panel['name_panel'], $data);
+        $extra_volume = $this->Modifyuser($username_account, $panel['name_panel'], array());
         if ($extra_volume['status'] == false) {
             return array(
                 'status' => false,
@@ -341,13 +378,13 @@ class ManagePanel
     {
         $panel = select("marzban_panel", "*", "code_panel", $code_panel, "select");
         $invoice = select("invoice", "*", "username", $username_account, "select");
-        if ($panel == false) {
+        if ($panel == false || !is_array($invoice)) {
             return array(
                 'status' => false,
                 'msg' => 'data not found'
             );
         }
-        $notif_value = json_decode($invoice['notifctions'], true);
+        $notif_value = json_decode($invoice['notifctions'], true) ?: ['volume' => false, 'time' => false];
         $notifctions = json_encode(array(
             'volume' => $notif_value['volume'],
             'time' => false,
@@ -374,7 +411,7 @@ class ManagePanel
         if ($driver !== null && ($result = $driver->extraTime(get_defined_vars())) !== BasePanelDriver::UNSUPPORTED) {
             return $result;
         }
-        $extra_time = $this->Modifyuser($username_account, $panel['name_panel'], $data);
+        $extra_time = $this->Modifyuser($username_account, $panel['name_panel'], array());
         if ($extra_time['status'] == false) {
             return array(
                 'status' => false,

@@ -38,7 +38,7 @@ function adduser_rebecca($location, $data_limit, $username_ac, $timestamp, $name
     $stmt->execute([$name_product, $location]);
     $product = $stmt->fetch(PDO::FETCH_ASSOC);
     $panel = select("marzban_panel", "*", "name_panel", $location, "select");
-    if ($product['inbounds'] != null) {
+    if (is_array($product) && ($product['inbounds'] ?? null) != null) {
         $panel['proxies'] = $product['inbounds'];
     }
     $service_ids = json_decode($panel['proxies'], true);
@@ -50,7 +50,7 @@ function adduser_rebecca($location, $data_limit, $username_ac, $timestamp, $name
         'note' => $note,
         'data_limit_reset_strategy' => $data_limit_reset,
     );
-    if ($limitip != null && $panel['limit_in_panel'] == "1") {
+    if ($limitip != null && ($panel['limit_in_panel'] ?? '0') == "1") {
         $data['ip_limit'] = intval($limitip);
     }
     if ($name_product == "usertest" || $force_active) {

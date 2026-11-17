@@ -1,4 +1,11 @@
 <?php
+// Polyfill for servers without mbstring (install.sh only warns there).
+if (!function_exists('mb_substr')) {
+    function mb_substr($string, $start, $length = null) {
+        return $length === null ? substr((string) $string, $start) : substr((string) $string, $start, $length);
+    }
+}
+
 $target = $argv[1] ?? '';
 $apply = in_array('--apply', $argv, true);
 $target = rtrim($target, "/\\");

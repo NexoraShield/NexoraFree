@@ -340,7 +340,7 @@ function panel_set_inbounds(array $data, string $method): void
         if (!empty($DataUserOut['error']))
             sendJsonResponse(false, $DataUserOut['error'], [], 200);
         if (!empty($DataUserOut['status']) && $DataUserOut['status'] != 200)
-            sendJsonResponse(false, $DataUserOut['msg'], [], 200);
+            sendJsonResponse(false, 'panel request failed (http ' . (int) ($DataUserOut['status'] ?? 0) . ')', [], 200);
         $DataUserOut = json_decode($DataUserOut['body'] ?? '', true);
         if (!is_array($DataUserOut))
             sendJsonResponse(false, "User Not Found", [], 200);
@@ -377,15 +377,15 @@ function panel_set_inbounds(array $data, string $method): void
             sendJsonResponse(false, "User Not Found", [], 200);
         $datainbound = json_encode($userdata['service_ids'] ?? []);
     } elseif ($panel['type'] == "x-ui_single") {
-        $user_data = get_clinets($data['input'], $panel['name_panel']);
+        $user_data = get_clinets($data['input'], $panel);
         if (!empty($user_data['error']))
             sendJsonResponse(false, $user_data['error'], [], 200);
         if (!empty($user_data['status']) && $user_data['status'] != 200)
-            sendJsonResponse(false, $user_data['msg'], [], 200);
+            sendJsonResponse(false, 'panel request failed (http ' . (int) ($user_data['status'] ?? 0) . ')', [], 200);
         $user_data = json_decode($user_data['body'] ?? '', true)['obj'] ?? null;
         if ($user_data == null)
             sendJsonResponse(false, "User Not Found", [], 200);
-        $datainbound = $user_data['inboundId'];
+        $datainbound = json_encode($user_data['inboundIds'] ?? []);
     } elseif ($panel['type'] == "ibsng" || $panel['type'] == "mikrotik") {
         $datainbound = $data['input'];
     } else {

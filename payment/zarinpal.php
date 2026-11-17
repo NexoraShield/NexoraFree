@@ -24,9 +24,10 @@ if (!is_array($Payment_reports)) {
     http_response_code(404);
     exit('order not found');
 }
-if ($Payment_reports['payment_Status'] == "expire") {
-    exit('order expired');
-}
+// An order marked 'expire' by housekeeping may still have been paid late
+// (slow gateways / review queues). A paid callback is honoured: the money is
+// ours, so the service is delivered instead of stranding the buyer's funds.
+// 'reject' (admin rejection) still blocks delivery.
 $price = $Payment_reports['price'];
 $invoice_id = $Payment_reports['id_order'];
 // verify Transaction
@@ -68,16 +69,18 @@ $payment_status = $textbotlang['paymentGateway']['zarinpalErrors'][$response['er
         DirectPayment($invoice_id,"../images.jpg");
     } catch (Throwable $directPaymentError) {
         error_log("DirectPayment failed for order {$invoice_id}: " . $directPaymentError->getMessage());
+        reportDirectPaymentFailure($invoice_id, $directPaymentError->getMessage());
         return;
     }
     $pricecashback = select("PaySetting", "ValuePay", "NamePay", "chashbackzarinpal","select")['ValuePay'];
     $Balance_id = select("user","*","id",$Payment_report['id_user'],"select");
     if($pricecashback != "0"){
-        $result = ($Payment_report['price'] * $pricecashback) / 100;
-        $Balance_confrim = intval($Balance_id['Balance']) +$result;
-        update("user","Balance",$Balance_confrim, "id",$Balance_id['id']); 
+        $cashback = (int) round(((float) $Payment_report['price'] * (float) $pricecashback) / 100);
+        if ($cashback > 0) {
+            addBalance($Balance_id['id'], $cashback);
+        }
         $pricecashback =  number_format($pricecashback);
-        $text_report = sprintf($textbotlang['paymentGateway']['giftReport'], $result);
+        $text_report = sprintf($textbotlang['paymentGateway']['giftReport'], $cashback);
         sendmessage($Balance_id['id'], $text_report, null, 'HTML');
     }
     $paymentreports = select("topicid","idreport","report","paymentreport","select")['idreport'];

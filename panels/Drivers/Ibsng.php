@@ -10,8 +10,14 @@ class IbsngPanelDriver extends BasePanelDriver
         $usernameC = $vars['usernameC'];
         $Output = $vars['Output'];
         $password = bin2hex(random_bytes(6));
+        // panel_protocol stores proxies as a JSON array (["group"]); the IBSng
+        // group name is a single string.
         $name_group = $Get_Data_Panel['proxies'];
-        if ($Get_Data_Product['inbounds'] != null) {
+        $decoded_group = is_string($name_group) ? json_decode($name_group, true) : null;
+        if (is_array($decoded_group) && count($decoded_group) === 1 && is_string($decoded_group[0])) {
+            $name_group = $decoded_group[0];
+        }
+        if (is_array($Get_Data_Product) && ($Get_Data_Product['inbounds'] ?? null) != null) {
             $name_group = $Get_Data_Product['inbounds'];
         } elseif ($code_product == "usertest") {
             $name_group = "usertest";

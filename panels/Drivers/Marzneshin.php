@@ -289,10 +289,12 @@ class MarzneshinPanelDriver extends BasePanelDriver
         $new_limit = $vars['new_limit'];
         $username_account = $vars['username_account'];
         $panel = $vars['panel'];
+        // $new_limit is a unix timestamp (0 = no expiry). Marzneshin expects
+        // ISO-8601 expire_date plus an expire_strategy, mirroring extendService().
+        $expire_strategy = $new_limit == 0 ? "never" : "fixed_date";
         $data = array(
-            'expire_date' => $new_limit,
-            'expire_strategy' => "fixed_date",
-
+            'expire_date' => date('c', $new_limit),
+            'expire_strategy' => $expire_strategy,
         );
         return $this->applyModify($username_account, $panel['name_panel'], $data);
     }

@@ -56,18 +56,25 @@ while ($Payment_report = ($list_service)->fetch(PDO::FETCH_ASSOC)) {
     if ($operationStatus == "completed") {
         if (!claimPaymentPaid($Payment_report['id_order']))
             continue;
-        DirectPayment($Payment_report['id_order'], "../images.jpg");
+        try {
+            DirectPayment($Payment_report['id_order'], "../images.jpg");
+        } catch (Throwable $e) {
+            error_log('cronbot/plisio DirectPayment failed order=' . $Payment_report['id_order'] . ' error=' . $e->getMessage());
+            reportDirectPaymentFailure($Payment_report['id_order'], $e->getMessage());
+            continue;
+        }
         $pricecashback = select("PaySetting", "ValuePay", "NamePay", "chashbackplisio", "select")['ValuePay'];
         $__q18 = $pdo->prepare("SELECT * FROM user WHERE id = ? LIMIT 1");
         $__q18->bindValue(1, $Payment_report['id_user'], PDO::PARAM_STR);
         $__q18->execute();
         $Balance_id = $__q18->fetch(PDO::FETCH_ASSOC);
         if ($pricecashback != "0") {
-            $result = ($Payment_report['price'] * $pricecashback) / 100;
-            $Balance_confrim = intval($Balance_id['Balance']) + $result;
-            update("user", "Balance", $Balance_confrim, "id", $Balance_id['id']);
+            $cashback = (int) round(((float) $Payment_report['price'] * (float) $pricecashback) / 100);
+            if ($cashback > 0) {
+                addBalance($Balance_id['id'], $cashback);
+            }
             $pricecashback = number_format($pricecashback);
-            $text_report = sprintf($textbotlang['users']['Balance']['giftDepositPlisio'], $result);
+            $text_report = sprintf($textbotlang['users']['Balance']['giftDepositPlisio'], $cashback);
             sendmessage($Balance_id['id'], $text_report, null, 'HTML');
         }
         $text_reportpayment = sprintf($textbotlang['Admin']['reportgroup']['newPaymentPlisio'], $Balance_id['username'], $Balance_id['id'], $Payment_report['price'], $operation['tx_url'][0] ?? '', $operation['invoice_url'] ?? '', $operation['invoice_total_sum'] ?? '');

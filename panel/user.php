@@ -356,7 +356,7 @@ include __DIR__ . '/inc/layout_head.php';
                                     'nowpayment' => 'NowPayment',
                                     'Star Telegram' => $textbotlang['panel']['userMethodTelegramStar'],
                                     'Currency Rial 1' => $textbotlang['panel']['userMethodRial1'],
-                                    'Currency Rial tow' => $textbotlang['panel']['userMethodRial2'],
+                                                                         'Currency Rial 2' => $textbotlang['panel']['userMethodRial2'],
                                     'Currency Rial 3' => $textbotlang['panel']['userMethodRial3'],
                                     'arze digital offline' => $textbotlang['panel']['userMethodCrypto'],
                                 ];

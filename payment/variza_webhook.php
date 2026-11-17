@@ -91,6 +91,9 @@ if ($payment['payment_Status'] === 'paid') {
     variza_webhook_respond(200, 'already paid');
 }
 
+// An expired order may have been paid late; honoured.
+// 'reject' blocks delivery via the claim below.
+
 // Amount check — both in Toman, do not credit if gateway reports less than billed.
 $billed = (int) $payment['price'];
 if ($amount < $billed) {
@@ -109,6 +112,7 @@ try {
     DirectPayment($order_id, __DIR__ . "/../images.jpg");
 } catch (Throwable $e) {
     error_log("variza webhook: DirectPayment failed for {$order_id}: " . $e->getMessage());
+    reportDirectPaymentFailure($order_id, $e->getMessage());
     variza_webhook_respond(500, 'delivery failed');
 }
 
@@ -117,10 +121,10 @@ $cashback = intval(getPaySettingValue('chashbackvariza', '0'));
 if ($cashback > 0) {
     $buyer = select("user", "*", "id", $payment['id_user'], "select");
     if ($buyer) {
-        $reward = intval($billed * $cashback / 100);
+        $reward = (int) floor($billed * $cashback / 100);
         if ($reward > 0) {
-            update("user", "Balance", intval($buyer['Balance']) + $reward, "id", $payment['id_user']);
-            $text_gift = sprintf($textbotlang['paymentGateway']['giftReport'], $reward);
+            addBalance($payment['id_user'], $reward);
+            $text_gift = sprintf($textbotlang['paymentGateway']['giftReport'], number_format($reward));
             sendmessage($payment['id_user'], $text_gift, null, 'HTML');
         }
     }

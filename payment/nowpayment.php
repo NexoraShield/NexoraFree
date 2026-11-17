@@ -18,22 +18,28 @@ if (isset($data['payment_status']) && $data['payment_status'] == "finished") {
         return;
     $Payment_report = select("Payment_report", "*", "id_order", (string) ($pay['order_id'] ?? ''), "select");
     if ($Payment_report && $Payment_report['Payment_Method'] === "nowpayment" && (string) $Payment_report['dec_not_confirmed'] === (string) ($pay['invoice_id'] ?? '')) {
+        // 'reject' (admin rejection) still blocks delivery; an expired order
+        // may have been paid late and is honoured.
+        if ($Payment_report['payment_Status'] === 'reject')
+            return;
         if (!claimPaymentPaid($Payment_report['id_order']))
             return;
         try {
             DirectPayment($Payment_report['id_order'], "../images.jpg");
         } catch (Throwable $directPaymentError) {
             error_log("DirectPayment failed for order {$Payment_report['id_order']}: " . $directPaymentError->getMessage());
+            reportDirectPaymentFailure($Payment_report['id_order'], $directPaymentError->getMessage());
             return;
         }
         $pricecashback = select("PaySetting", "ValuePay", "NamePay", "cashbacknowpayment", "select")['ValuePay'];
         $Balance_id = select("user", "*", "id", $Payment_report['id_user'], "select");
         if ($pricecashback != "0") {
-            $result = ($Payment_report['price'] * $pricecashback) / 100;
-            $Balance_confrim = intval($Balance_id['Balance']) + $result;
-            update("user", "Balance", $Balance_confrim, "id", $Balance_id['id']);
+            $cashback = (int) round(((float) $Payment_report['price'] * (float) $pricecashback) / 100);
+            if ($cashback > 0) {
+                addBalance($Balance_id['id'], $cashback);
+            }
             $pricecashback = number_format($pricecashback);
-            $text_report = sprintf($textbotlang['paymentGateway']['giftReport'], $result);
+            $text_report = sprintf($textbotlang['paymentGateway']['giftReport'], $cashback);
             sendmessage($Balance_id['id'], $text_report, null, 'HTML');
         }
         $text_reportpayment = sprintf($textbotlang['paymentGateway']['reportNowpayment'], $Balance_id['username'], $Balance_id['id'], $Payment_report['price'], $pay['actually_paid']);

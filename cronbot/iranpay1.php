@@ -27,14 +27,21 @@ while ($Payment_report = ($list_service)->fetch(PDO::FETCH_ASSOC)) {
     if (!claimPaymentPaid($Payment_report['id_order']))
         continue;
     update("Payment_report", "dec_not_confirmed", json_encode($StatusPayment['data']), "id_order", $Payment_report['id_order']);
-    DirectPayment($Payment_report['id_order']);
-    $pricecashback = select("PaySetting", "ValuePay", "NamePay", "chashbackiranpay1", "select")['ValuePay'];
+    try {
+        DirectPayment($Payment_report['id_order']);
+    } catch (Throwable $e) {
+        error_log('cronbot/iranpay1 DirectPayment failed order=' . $Payment_report['id_order'] . ' error=' . $e->getMessage());
+        reportDirectPaymentFailure($Payment_report['id_order'], $e->getMessage());
+        continue;
+    }
+    $pricecashback = select("PaySetting", "ValuePay", "NamePay", "chashbackiranpay3", "select")['ValuePay'];
     $Balance_id = select("user", "*", "id", $Payment_report['id_user'], "select");
     if ($pricecashback != "0") {
-        $result = ($Payment_report['price'] * $pricecashback) / 100;
-        $Balance_confrim = intval($Balance_id['Balance']) + $result;
-        update("user", "Balance", $Balance_confrim, "id", $Balance_id['id']);
-        $text_report = sprintf($textbotlang['users']['Balance']['giftDepositIranpay'], $result);
+        $cashback = (int) round(((float) $Payment_report['price'] * (float) $pricecashback) / 100);
+        if ($cashback > 0) {
+            addBalance($Balance_id['id'], $cashback);
+        }
+        $text_report = sprintf($textbotlang['users']['Balance']['giftDepositIranpay'], $cashback);
         sendmessage($Balance_id['id'], $text_report, null, 'HTML');
     }
     $text_reportpayment = sprintf($textbotlang['Admin']['reportgroup']['newPaymentIranpay'], $Balance_id['username'], $Balance_id['id'], $Payment_report['price']);

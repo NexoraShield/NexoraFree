@@ -13,11 +13,11 @@ if (is_file($stateFile)) {
     if (!is_array($reminded)) $reminded = [];
 }
 try {
-    $stmt = $pdo->query("SELECT id_order, id_user, price FROM Payment_report WHERE payment_Status != 'paid' AND payment_Status != 'expire' ORDER BY id_order DESC LIMIT 200");
+    $stmt = $pdo->query("SELECT id_order, id_user, price FROM Payment_report WHERE payment_Status = 'Unpaid' ORDER BY id_order DESC LIMIT 200");
     $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
 } catch (Throwable $e) {
     error_log('nudge_unpaid query: ' . $e->getMessage());
-    exit;
+    return;
 }
 $sent = 0;
 foreach ($rows as $r) {

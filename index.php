@@ -57,7 +57,6 @@ if (version_compare(PHP_VERSION, MIN_PHP_VERSION, '<')) {
 if (isset($update['chat_member'])) {
     $status = $update['chat_member']['new_chat_member']['status'];
     $from_id = $update['chat_member']['new_chat_member']['user']['id'];
-    $user = select("user", "id", $from_id);
     $keyboard_channel_left = json_encode([
         'inline_keyboard' => [
             [
@@ -136,11 +135,12 @@ if (isset($update['message']['successful_payment'])) {
     $pricecashback = getPaySetting("chashbackstar")['ValuePay'];
     $Balance_id = select("user", "*", "id", $Payment_report['id_user'], "select");
     if ($pricecashback != "0") {
-        $result = ($Payment_report['price'] * $pricecashback) / 100;
-        $Balance_confrim = intval($Balance_id['Balance']) + $result;
-        addBalance($Balance_id['id'], $result);
-        $text_report = sprintf($textbotlang['users']['Discount']['gift-deposit'], $result);
-        sendmessage($Balance_id['id'], $text_report, null, 'HTML');
+        $result = (int) round(((float) $Payment_report['price'] * (float) $pricecashback) / 100);
+        if ($result > 0) {
+            addBalance($Balance_id['id'], $result);
+            $text_report = sprintf($textbotlang['users']['Discount']['gift-deposit'], $result);
+            sendmessage($Balance_id['id'], $text_report, null, 'HTML');
+        }
     }
     if (strlen((string)($setting['Channel_Report'] ?? '')) > 0) {
         telegram('sendmessage', [

@@ -24,9 +24,8 @@ if (!is_array($payment_row) || $payment_row['Payment_Method'] !== "aqayepardakht
     http_response_code(404);
     exit('order not found');
 }
-if ($payment_row['payment_Status'] == "expire") {
-    exit('order expired');
-}
+// Late payment on an expired order is honoured (money was received);
+// 'reject' keeps blocking delivery.
 if (!empty($payment_row['dec_not_confirmed']) && !hash_equals((string) $payment_row['dec_not_confirmed'], (string) $transid)) {
     http_response_code(400);
     exit('invalid transid');
@@ -64,19 +63,21 @@ if (is_object($result) && $result->code == "1") {
         DirectPayment($invoice_id,"../images.jpg");
     } catch (Throwable $directPaymentError) {
         error_log("DirectPayment failed for order {$invoice_id}: " . $directPaymentError->getMessage());
+        reportDirectPaymentFailure($invoice_id, $directPaymentError->getMessage());
         return;
     }
-    $pricecashback = select("PaySetting", "ValuePay", "NamePay", "chashbackaqaypardokht","select")['ValuePay'];
+    $pricecashback = getPaySettingValue('chashbackaqayepardakht', getPaySettingValue('chashbackaqaypardokht', '0'));
     $__q16 = $pdo->prepare("SELECT * FROM user WHERE id = ? LIMIT 1");
     $__q16->bindValue(1, $Payment_report['id_user'], PDO::PARAM_STR);
     $__q16->execute();
     $Balance_id = $__q16->fetch(PDO::FETCH_ASSOC);
     if($pricecashback != "0"){
-        $result = ($Payment_report['price'] * $pricecashback) / 100;
-        $Balance_confrim = intval($Balance_id['Balance']) +$result;
-        update("user","Balance",$Balance_confrim, "id",$Balance_id['id']); 
+        $cashback = (int) round(((float) $Payment_report['price'] * (float) $pricecashback) / 100);
+        if ($cashback > 0) {
+            addBalance($Balance_id['id'], $cashback);
+        }
         $pricecashback =  number_format($pricecashback);
-        $text_report = sprintf($textbotlang['paymentGateway']['giftReport'], $result);
+        $text_report = sprintf($textbotlang['paymentGateway']['giftReport'], $cashback);
         sendmessage($Balance_id['id'], $text_report, null, 'HTML');
     }
     $paymentreports = select("topicid","idreport","report","paymentreport","select")['idreport'];

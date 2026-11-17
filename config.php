@@ -11,10 +11,12 @@ $options = [
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     PDO::ATTR_EMULATE_PREPARES => false,
 ];
-// PDO::MYSQL_ATTR_INIT_COMMAND is deprecated since PHP 8.5 (use Pdo\Mysql::ATTR_INIT_COMMAND).
+// The constant lives in different places across PHP versions; register it
+// only when it exists so a missing/old mysql driver degrades to a plain
+// "database connection failed" instead of a fatal error.
 if (defined('Pdo\Mysql::ATTR_INIT_COMMAND')) {
     $options[constant('Pdo\Mysql::ATTR_INIT_COMMAND')] = "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci";
-} else {
+} elseif (defined('PDO::MYSQL_ATTR_INIT_COMMAND')) {
     $options[PDO::MYSQL_ATTR_INIT_COMMAND] = "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci";
 }
 $dsn = "mysql:host=$dbhost;dbname=$dbname;charset=utf8mb4";
@@ -22,7 +24,8 @@ try {
     $pdo = new PDO($dsn, $usernamedb, $passworddb, $options);
 } catch (\PDOException $e) {
     error_log("Database connection failed: " . $e->getMessage());
-    die("error: database connection failed");
+    echo "error: database connection failed";
+    exit(1);
 }
 $APIKEY = '{API_KEY}';
 $adminnumber = '{admin_number}';

@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== '') {
         $style = nexora_btnstyle_clean_style($_POST['btn_style'] ?? '');
         if ($id > 0) {
             try {
-                db_query($pdo, "UPDATE `{$map[$action]['table']}` SET btn_style=? WHERE `{$map[$action]['idcol']}`=?", [$style !== '' ? $style : null, $action_id]);
+                db_query($pdo, "UPDATE `{$map[$action]['table']}` SET btn_style=? WHERE `{$map[$action]['idcol']}`=?", [$style !== '' ? $style : null, $id]);
                 flash('success', 'ذخیره شد.');
             } catch (Exception $e) {
                 flash('error', 'خطای دیتابیس: ' . $e->getMessage());

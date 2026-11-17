@@ -58,7 +58,7 @@ try {
     $rows = db_query(
         $pdo,
         "SELECT id, name_product, price_product, Volume_constraint, Service_time, Location
-         FROM product WHERE hide_panel IS NULL OR hide_panel = 0
+         FROM product WHERE hide_panel IS NULL OR hide_panel IN ('{}', '', '[]', '0')
          ORDER BY display_order, id"
     );
     foreach ($rows as $row) {

@@ -229,7 +229,7 @@ include __DIR__ . '/inc/layout_head.php';
 </script>
 
 <form method="post" id="updateForm" style="display:none">
-    <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
+    <input type="hidden" name="_csrf" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
     <input type="hidden" name="action" value="update">
     <input type="hidden" name="channel" value="stable">
 </form>

@@ -540,7 +540,9 @@ function select($table, $field, $whereField = null, $whereValue = null, $type = 
             // Return only requested fields if not '*'
             if ($field !== '*' && $field !== null) {
                 if (isset($cached[$field])) {
-                    return $cached[$field];
+                    // Match the shape of a non-cached single-field read
+                    // (an associative row), so callers can use ['field'].
+                    return [$field => $cached[$field]];
                 }
             }
             return $cached;
@@ -1648,6 +1650,9 @@ function deductBalance($user, $amount)
     $stmt = $pdo->prepare("UPDATE user SET Balance = Balance - ? WHERE id = ? AND (? IS NULL OR Balance - ? >= ?)");
     $stmt->execute([$amount, $user['id'], $minBalance, $amount, $minBalance]);
     clearSelectCache('user');
+    if (isset($GLOBALS['nexora_user_cache'][$user['id']])) {
+        unset($GLOBALS['nexora_user_cache'][$user['id']]);
+    }
     return $stmt->rowCount() === 1;
 }
 function addBalance($userId, $amount)
@@ -1659,6 +1664,9 @@ function addBalance($userId, $amount)
     $stmt = $pdo->prepare("UPDATE user SET Balance = Balance + ? WHERE id = ?");
     $stmt->execute([$amount, $userId]);
     clearSelectCache('user');
+    if (isset($GLOBALS['nexora_user_cache'][$userId])) {
+        unset($GLOBALS['nexora_user_cache'][$userId]);
+    }
 }
 function cancelPendingGatewayOrders($id_user): void
 {
@@ -1699,6 +1707,35 @@ function claimPaymentPaid($order_id)
     $stmt->execute();
     clearSelectCache('Payment_report');
     return $stmt->rowCount() >= 1;
+}
+
+/**
+ * Tell the admins (via the report channel) that a paid order could not be
+ * delivered. DirectPayment() is not transactional: the user's money is
+ * already collected at this point, so silence means a lost sale plus a
+ * support case discovered days later. The callback pages log the failure
+ * locally too; this function adds the human alert.
+ */
+function reportDirectPaymentFailure($order_id, $error)
+{
+    $text = '⚠️ تحویل خودکارِ سفارش شکست خورد.\nکد سفارش: ' . $order_id . '\nخطا: ' . $error;
+    try {
+        $setting = select('setting', '*');
+        $channel = (string) ($setting['Channel_Report'] ?? '');
+        $errorreport = select('topicid', 'idreport', 'report', 'errorreport', 'select')['idreport'] ?? null;
+        if ($channel !== '' && strlen($channel) > 0) {
+            telegram('sendmessage', [
+                'chat_id' => $channel,
+                'message_thread_id' => $errorreport,
+                'text' => $text,
+                'parse_mode' => 'HTML',
+            ]);
+        }
+    } catch (Throwable $e) {
+        // The alert itself must never take the gateway callback down.
+        error_log('reportDirectPaymentFailure: ' . $e->getMessage());
+    }
+    error_log('[DirectPayment] delivery failure order=' . $order_id . ' error=' . $error);
 }
 
 function DirectPayment($order_id, $image = 'images.jpg')
@@ -1759,6 +1796,9 @@ function DirectPayment($order_id, $image = 'images.jpg')
     $stmtReset = $pdo->prepare("UPDATE user SET Processing_value = '0', Processing_value_one = '0', Processing_value_tow = '0', Processing_value_four = '0' WHERE id = ?");
     $stmtReset->execute([$Balance_id['id']]);
     clearSelectCache('user');
+    if (isset($GLOBALS['nexora_user_cache'][$Balance_id['id']])) {
+        unset($GLOBALS['nexora_user_cache'][$Balance_id['id']]);
+    }
     if ($orderType == "buy") {
         $stmt = $pdo->prepare("SELECT * FROM product WHERE name_product = :name_product AND (Location = :Service_location  or Location = '/all')");
         $stmt->bindParam(':name_product', $get_invoice['name_product'], PDO::PARAM_STR);
@@ -1877,7 +1917,7 @@ function DirectPayment($order_id, $image = 'images.jpg')
         if ($affiliatescommission['status_commission'] == "oncommission" && ($Balance_id['affiliates'] != null && intval($Balance_id['affiliates']) != 0)) {
             if ($marzbanporsant_one_buy['porsant_one_buy'] == "on_buy_porsant") {
                 if ($countinvoice <= 1) {
-                    $result = ($Payment_report['price'] * $setting['affiliatespercentage']) / 100;
+                    $result = (int) round(((float) $Payment_report['price'] * (float) $setting['affiliatespercentage']) / 100);
                     $user_Balance = select("user", "*", "id", $Balance_id['affiliates'], "select");
                     if (intval($setting['scorestatus']) == 1 and !in_array($Balance_id['affiliates'], $admin_ids)) {
                         sendmessage($Balance_id['affiliates'], $textbotlang['users']['affiliates']['pointsEarned2Alt'], null, 'html');
@@ -1901,7 +1941,7 @@ function DirectPayment($order_id, $image = 'images.jpg')
                 }
             } else {
 
-                $result = ($Payment_report['price'] * $setting['affiliatespercentage']) / 100;
+                $result = (int) round(((float) $Payment_report['price'] * (float) $setting['affiliatespercentage']) / 100);
                 $user_Balance = select("user", "*", "id", $Balance_id['affiliates'], "select");
                 if (intval($setting['scorestatus']) == 1 and !in_array($Balance_id['affiliates'], $admin_ids)) {
                     sendmessage($Balance_id['affiliates'], $textbotlang['users']['affiliates']['pointsEarned2Alt'], null, 'html');
@@ -2550,10 +2590,22 @@ function checktelegramip()
         return false;
     }
 
+    // Synced with https://core.telegram.org/resources/cidr.txt (fetched 2026-11-17).
     $telegramIpRanges = [
         ['lower' => '149.154.160.0', 'upper' => '149.154.175.255'],
         ['lower' => '91.108.4.0', 'upper' => '91.108.7.255'],
-        ['lower' => '2001:67c:4e8::', 'upper' => '2001:67c:4e8:ffff:ffff:ffff:ffff:ffff']
+        ['lower' => '91.108.8.0', 'upper' => '91.108.11.255'],
+        ['lower' => '91.108.12.0', 'upper' => '91.108.15.255'],
+        ['lower' => '91.108.16.0', 'upper' => '91.108.19.255'],
+        ['lower' => '91.108.20.0', 'upper' => '91.108.23.255'],
+        ['lower' => '91.108.56.0', 'upper' => '91.108.59.255'],
+        ['lower' => '91.105.192.0', 'upper' => '91.105.193.255'],
+        ['lower' => '185.76.151.0', 'upper' => '185.76.151.255'],
+        ['lower' => '2001:67c:4e8::', 'upper' => '2001:67c:4e8:ffff:ffff:ffff:ffff:ffff'],
+        ['lower' => '2001:b28:f23c::', 'upper' => '2001:b28:f23c:ffff:ffff:ffff:ffff:ffff'],
+        ['lower' => '2001:b28:f23d::', 'upper' => '2001:b28:f23d:ffff:ffff:ffff:ffff:ffff'],
+        ['lower' => '2001:b28:f23f::', 'upper' => '2001:b28:f23f:ffff:ffff:ffff:ffff:ffff'],
+        ['lower' => '2a0a:f280::', 'upper' => '2a0a:f280:ffff:ffff:ffff:ffff:ffff:ffff']
     ];
 
     foreach ($telegramIpRanges as $range) {

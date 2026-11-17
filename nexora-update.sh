@@ -37,7 +37,7 @@ if ! git clone --depth 1 -b "$BRANCH" https://github.com/NexoraShield/NexoraFree
         exit 1
     fi
     unzip -o -q "$TMPD/pkg.zip" -d "$TMPD"
-    mv "$TMPD"/Nexora-* "$TMPD/pkg" 2>/dev/null || true
+    mv "$TMPD"/NexoraFree-* "$TMPD/pkg" 2>/dev/null || true
 fi
 
 cd "$TMPD/pkg"

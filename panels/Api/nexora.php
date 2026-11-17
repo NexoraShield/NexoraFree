@@ -79,7 +79,7 @@ function adduser_nexora($location, $data_limit, $username_ac, $timestamp, $name_
         $data['allTemplates'] = $templates['allTemplates'] ?? false;
         $data['group'] = $templates['group'] ?? '';
     }
-    if ($limitip != null && $panel['limit_in_panel'] == "1") {
+    if ($limitip != null && ($panel['limit_in_panel'] ?? '0') == "1") {
         $data['ipLimit'] = intval($limitip);
     }
     if ($name_product == "usertest" || $force_active) {

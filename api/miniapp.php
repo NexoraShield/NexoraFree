@@ -365,7 +365,7 @@ function mini_user_info(array $data, string $method): void
             'f' => $textbotlang['common']['roles']['normal'],
             'n' => $textbotlang['common']['roles']['agent'],
             'n2' => $textbotlang['common']['roles']['advancedAgent'],
-        ][$user_info['agent']];
+        ][$user_info['agent'] ?? 'f'] ?? $textbotlang['common']['roles']['normal'];
         $userjoin = jdate('Y/m/d', $user_info['register']);
         echo json_encode([
             'status' => true,

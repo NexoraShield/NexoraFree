@@ -68,7 +68,7 @@ function adduser_wgmate($location, $data_limit, $username_ac, $timestamp, $name_
         $data['protocols'] = $template['protocols'] ?? [];
         $data['serverId'] = $template['serverId'] ?? '';
     }
-    if ($limitip != null && $panel['limit_in_panel'] == "1") {
+    if ($limitip != null && ($panel['limit_in_panel'] ?? '0') == "1") {
         $data['connLimit'] = intval($limitip);
     }
     return request_wgmate($location, "POST", '/users', $data);

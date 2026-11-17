@@ -331,7 +331,7 @@ if (!function_exists('nexora_apply_panel_protocol_inner')) {
             }
             if ($type === 'marzban') {
                 $up = $pdo->prepare("UPDATE marzban_panel SET inbounds = ?, proxies = ? WHERE name_panel = ?");
-                $up->execute([json_encode($values['inbounds'] ?? []), json_encode($values['proxies'], true), $panelName]);
+                $up->execute([json_encode($values['inbounds'] ?? []), json_encode($values['proxies']), $panelName]);
                 return ['ok' => true, 'message' => 'پروتکل و اینباند پنل با اکانت «' . $username . '» تنظیم شد.'];
             }
             if ($type === 'x-ui_single') {
@@ -346,7 +346,7 @@ if (!function_exists('nexora_apply_panel_protocol_inner')) {
             }
             if (in_array($type, ['wg_mate', 'nexora', 'rebecca'], true)) {
                 $up = $pdo->prepare("UPDATE marzban_panel SET proxies = ? WHERE name_panel = ?");
-                $up->execute([json_encode($values['proxies'], true), $panelName]);
+                $up->execute([json_encode($values['proxies']), $panelName]);
                 return ['ok' => true, 'message' => 'پروتکل و اینباند پنل با اکانت «' . $username . '» تنظیم شد.'];
             }
         } catch (Throwable $e) {

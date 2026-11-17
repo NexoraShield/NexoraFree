@@ -86,6 +86,7 @@ for ($i = 0; $i < 20; $i++) {
     if ($info['type'] == "unpinmessage") {
         unpinmessage($iduser->id);
     } elseif ($info['type'] == "sendmessage" or $info['type'] == "xdaynotmessage") {
+        $meesage = null;
         if ($info['btnmessage'] == "none") {
             $meesage = sendmessage($iduser->id, $info['message'], null, 'HTML');
         } elseif ($info['btnmessage'] == "buy") {
@@ -102,7 +103,7 @@ for ($i = 0; $i < 20; $i++) {
             $meesage = sendmessage($iduser->id, $info['message'], $keyboardaddbalance, 'HTML');
         }
 
-        if ($meesage['ok'] == false and $meesage['description'] == "Forbidden: bot was blocked by the user") {
+        if (is_array($meesage) && ($meesage['ok'] ?? true) === false && ($meesage['description'] ?? '') == "Forbidden: bot was blocked by the user") {
             $invoicecount = select("invoice", "*", "id_user", $iduser->id, "count");
             $userinfo = select("user", "Balance", "id", $iduser->id, "select");
             if ($invoicecount == 0 and $userinfo['Balance'] == 0) {
@@ -112,15 +113,15 @@ for ($i = 0; $i < 20; $i++) {
             }
         }
 
-        if ($meesage['ok'] and $info['pingmessage'] == "yes") {
+        if (is_array($meesage) && ($meesage['ok'] ?? false) && $info['pingmessage'] == "yes") {
             pinmessage($iduser->id, $meesage['result']['message_id']);
         }
     } elseif ($info['type'] == "forwardmessage") {
         $meesage = forwardMessage($info['id_admin'], $info['message'], $iduser->id);
-        if ($meesage['ok'] and $info['pingmessage'] == "yes") {
+        if (is_array($meesage) && ($meesage['ok'] ?? false) && $info['pingmessage'] == "yes") {
             pinmessage($iduser->id, $meesage['result']['message_id']);
         }
     }
 }
 
-file_put_contents('users.json',json_encode($userid,true));
+file_put_contents('users.json',json_encode($userid));

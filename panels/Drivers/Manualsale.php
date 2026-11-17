@@ -39,15 +39,23 @@ class ManualsalePanelDriver extends BasePanelDriver
         $stmt->execute();
         $configman = $stmt->fetch(PDO::FETCH_ASSOC);
         $service = select("invoice", "*", "username", $username, "select");
+        if (!is_array($service)) {
+            return array(
+                'status' => 'Unsuccessful',
+                'msg' => 'invoice not found'
+            );
+        }
+        $ts = strtotime((string) ($service['time_sell'] ?? ''));
+        $expire = $ts === false ? null : $ts + ((int) ($service['Service_time'] ?? 0) * 86400);
         $Output = array(
             'status' => $service['Status'],
             'username' => $service['username'],
             'data_limit' => null,
-            'expire' => $service['time_sell'],
+            'expire' => $expire,
             'online_at' => null,
             'used_traffic' => null,
             'links' => [],
-            'subscription_url' => $configman['contentrecord'],
+            'subscription_url' => is_array($configman) ? ($configman['contentrecord'] ?? '') : '',
             'sub_updated_at' => null,
             'sub_last_user_agent' => null,
             'uuid' => null

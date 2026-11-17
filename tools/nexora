@@ -314,7 +314,7 @@ do_analytics() {
     if [[ -z "$DB_NAME" || -z "$DB_USER" ]]; then
         printf "  ${RED}DB credentials not found in config.php${RESET}\n"; pause; return 1
     fi
-    local q="SELECT (SELECT COUNT(*) FROM users) AS u, (SELECT COUNT(*) FROM invoice) AS i, (SELECT COUNT(*) FROM service) AS s, (SELECT COUNT(*) FROM payments) AS p;"
+    local q="SELECT (SELECT COUNT(*) FROM user) AS u, (SELECT COUNT(*) FROM invoice) AS i, (SELECT COUNT(*) FROM service_other) AS s, (SELECT COUNT(*) FROM Payment_report) AS p;"
     mysql -h "${DB_HOST:-localhost}" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -N -e "$q" 2>/dev/null | awk -F'\t' '{printf "  Users: %s   Invoices: %s   Services: %s   Payments: %s\n", $1,$2,$3,$4}'
     printf "\n  ${DIM}error_log lines: %s${RESET}\n" "$(wc -l < "$BOT_DIR/error_log" 2>/dev/null || echo 0)"
     printf "  ${DIM}Disk free: %s${RESET}\n" "$(df -h / 2>/dev/null | awk 'NR==2{print $4}')"

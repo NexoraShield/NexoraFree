@@ -45,15 +45,22 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     clearSelectCache('Payment_report');
     if ($stmtPaid->rowCount() === 0)
         continue;
-    DirectPayment($Payment_report['id_order'], "../images.jpg");
+    try {
+        DirectPayment($Payment_report['id_order'], "../images.jpg");
+    } catch (Throwable $e) {
+        error_log('cronbot/croncard DirectPayment failed order=' . $Payment_report['id_order'] . ' error=' . $e->getMessage());
+        reportDirectPaymentFailure($Payment_report['id_order'], $e->getMessage());
+        continue;
+    }
     $pricecashback = select("PaySetting", "ValuePay", "NamePay", "chashbackcart", "select")['ValuePay'];
     $Balance_id = select("user", "*", "id", $Payment_report['id_user'], "select");
     if ($pricecashback != "0") {
-        $result = ($Payment_report['price'] * $pricecashback) / 100;
-        $Balance_confrim = intval($Balance_id['Balance']) + $result;
-        update("user", "Balance", $Balance_confrim, "id", $Balance_id['id']);
+        $cashback = (int) round(((float) $Payment_report['price'] * (float) $pricecashback) / 100);
+        if ($cashback > 0) {
+            addBalance($Balance_id['id'], $cashback);
+        }
         $pricecashback = number_format($pricecashback);
-        $text_report = sprintf($textbotlang['users']['Balance']['giftDeposit'], $result);
+        $text_report = sprintf($textbotlang['users']['Balance']['giftDeposit'], $cashback);
         sendmessage($Balance_id['id'], $text_report, null, 'HTML');
     }
     $text_reportpayment = sprintf($textbotlang['Admin']['reportgroup']['newPaymentAutoConfirm'], $Balance_id['id'], $Payment_report['price'], $Payment_report['Payment_Method']);

@@ -116,10 +116,8 @@ $payer_row = select("user", "*", "id", $Payment_report['id_user'], "select");
 $page_lang = is_array($payer_row) && !empty($payer_row['lang']) ? $payer_row['lang'] : 'fa';
 $page_texts = languagechange(dirname(__DIR__), $page_lang);
 
-if ($Payment_report['payment_Status'] == "expire") {
-    cubepay_emit('expired', $page_texts, $data_order_id, $Payment_report['price'], $page_lang);
-    return;
-}
+// An expired order may still have been paid late; honoured below via verify.
+// 'reject' still blocks delivery.
 $setting = select("setting", "*", null, null, "select");
 $price = $Payment_report['price'];
 
@@ -185,16 +183,18 @@ try {
     DirectPayment($data_order_id, "../images.jpg");
 } catch (Throwable $directPaymentError) {
     error_log("DirectPayment failed for order {$data_order_id}: " . $directPaymentError->getMessage());
+    reportDirectPaymentFailure($data_order_id, $directPaymentError->getMessage());
     return;
 }
 $pricecashback = select("PaySetting", "ValuePay", "NamePay", "chashbackiranpay2", "select")['ValuePay'];
 $Balance_id = select("user", "*", "id", $Payment_report['id_user'], "select");
 if ($pricecashback != "0") {
-    $result_cashback = ($Payment_report['price'] * $pricecashback) / 100;
-    $Balance_confrim = intval($Balance_id['Balance']) + $result_cashback;
-    update("user", "Balance", $Balance_confrim, "id", $Balance_id['id']);
+    $cashback = (int) round(((float) $Payment_report['price'] * (float) $pricecashback) / 100);
+    if ($cashback > 0) {
+        addBalance($Balance_id['id'], $cashback);
+    }
     $pricecashback = number_format($pricecashback);
-    $text_report = sprintf($textbotlang['paymentGateway']['giftReport'], $result_cashback);
+    $text_report = sprintf($textbotlang['paymentGateway']['giftReport'], $cashback);
     sendmessage($Balance_id['id'], $text_report, null, 'HTML');
 }
 $paymentreports = select("topicid", "idreport", "report", "paymentreport", "select")['idreport'];

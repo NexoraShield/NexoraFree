@@ -48,6 +48,10 @@ if ($payment['payment_Status'] === 'paid') {
     iranpay4_finish(true, $successTitle, 'این پرداخت قبلاً تایید شده است.');
 }
 
+// An expired order may have been paid late; verify decides.
+// 'reject' still blocks delivery.
+$setting = select("setting", "*");
+
 $api_key = trim((string) getPaySettingValue('apiiranpay4', ''));
 $endpoint = abangatewayEndpoint();
 if ($api_key === '' || $api_key === '0' || $endpoint === null) {
@@ -99,6 +103,7 @@ try {
     DirectPayment($order_id, "../images.jpg");
 } catch (Throwable $error) {
     error_log("iranpay4: DirectPayment failed for {$order_id}: " . $error->getMessage());
+    reportDirectPaymentFailure($order_id, $error->getMessage());
     iranpay4_finish(false, $failedTitle, 'پرداخت تایید شد ولی تحویل سرویس خطا داد. با پشتیبانی تماس بگیرید.');
 }
 
@@ -113,9 +118,9 @@ $buyer = select("user", "*", "id", $payment['id_user'], "select");
 
 $cashback = intval(getPaySettingValue('chashbackiranpay4', '0'));
 if ($cashback > 0 && $buyer) {
-    $reward = intval($price * $cashback / 100);
+    $reward = (int) floor($price * $cashback / 100);
     if ($reward > 0) {
-        update("user", "Balance", intval($buyer['Balance']) + $reward, "id", $payment['id_user']);
+        addBalance($buyer['id'], $reward);
         sendmessage(
             $buyer['id'],
             sprintf($textbotlang['paymentGateway']['giftReport'], number_format($reward)),

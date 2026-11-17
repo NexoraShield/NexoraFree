@@ -82,6 +82,10 @@ function nexora_keyboard_style_flip(array $replacements = []): array
 }
 $temp_addtional_key = [];
 $keyboardLayout = json_decode($setting['keyboardmain'], true);
+// The free version has no agent panel: the matching buttons are always
+// stripped from saved keyboard layouts.
+$agentPanelAllowed = false;
+$agentRequestAllowed = false;
 $keyboardRows = [];
 if (is_array($keyboardLayout) && isset($keyboardLayout['keyboard']) && is_array($keyboardLayout['keyboard'])) {
     $keyboardRows = $keyboardLayout['keyboard'];

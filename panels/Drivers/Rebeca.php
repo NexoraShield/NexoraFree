@@ -16,7 +16,10 @@ class RebecaPanelDriver extends BasePanelDriver
         //create user
         $order_get = select("invoice", "*", "username", $usernameC, "select");
         $forceActive = !empty($vars['forceActive']);
-        $ConnectToPanel = adduser_rebecca($Get_Data_Panel['name_panel'], $data_limit, $usernameC, $expire, $Get_Data_Product['name_product'], $note, $Get_Data_Product['data_limit_reset'], $order_get['limit_user'], $forceActive);
+        // The invoice table carries no per-order IP-limit column; this stays null
+        // (the ip_limit argument of adduser_rebecca is then not sent).
+        $order_limit_user = (is_array($order_get) ? ($order_get['limit_user'] ?? null) : null);
+        $ConnectToPanel = adduser_rebecca($Get_Data_Panel['name_panel'], $data_limit, $usernameC, $expire, $Get_Data_Product['name_product'], $note, $Get_Data_Product['data_limit_reset'], $order_limit_user, $forceActive);
         if (!empty($ConnectToPanel['status']) && $ConnectToPanel['status'] == 500) {
             return array(
                 'status' => 'Unsuccessful',

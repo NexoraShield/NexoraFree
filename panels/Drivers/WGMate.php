@@ -154,12 +154,22 @@ class WGMatePanelDriver extends BasePanelDriver
         $name_panel = $vars['name_panel'];
         $username = $vars['username'];
         $DataUserOut = $vars['DataUserOut'];
-        action_wgmate($name_panel, $username, "POST", $DataUserOut['status'] == "active" ? '/disable' : '/enable');
-        $Output = array(
+        $action = $DataUserOut['status'] == "active" ? '/disable' : '/enable';
+        $result = action_wgmate($name_panel, $username, "POST", $action);
+        $status = $result['status'] ?? null;
+        if (!empty($result['error'])) {
+            return array('status' => 'Unsuccessful', 'msg' => 'error : ' . $result['error']);
+        }
+        if ($status === null || (int) $status >= 400) {
+            return array(
+                'status' => 'Unsuccessful',
+                'msg' => json_decode($result['body'] ?? '', true)['error'] ?? ('error code : ' . ($status ?? 'no response'))
+            );
+        }
+        return array(
             'status' => 'successful',
             'msg' => null
         );
-        return $Output;
     }
 
     public function resetUsage(array $vars)

@@ -2563,15 +2563,21 @@ elseif ($datain == "systemsms") {
         Editmessagetext($from_id, $message_id, $textconfrom, $Confirm_pay);
         return;
     }
-    DirectPayment($order_id);
+    try {
+        DirectPayment($order_id);
+    } catch (Throwable $e) {
+        error_log('admin confirm-pay DirectPayment failed order=' . $order_id . ' error=' . $e->getMessage());
+        reportDirectPaymentFailure($order_id, $e->getMessage());
+    }
     $pricecashback = getPaySetting("chashbackcart")['ValuePay'];
     $Balance_id = select("user", "*", "id", $Payment_report['id_user'], "select");
     if ($pricecashback != "0") {
-        $result = ($Payment_report['price'] * $pricecashback) / 100;
-        $Balance_confrim = intval($Balance_id['Balance']) + $result;
-        update("user", "Balance", $Balance_confrim, "id", $Balance_id['id']);
+        $cashback = (int) round(((float) $Payment_report['price'] * (float) $pricecashback) / 100);
+        if ($cashback > 0) {
+            addBalance($Balance_id['id'], $cashback);
+        }
         $pricecashback = number_format($pricecashback);
-        $text_report = sprintf($textbotlang['users']['Balance']['giftDepositAlt'], $result);
+        $text_report = sprintf($textbotlang['users']['Balance']['giftDepositAlt'], $cashback);
         sendmessage($Balance_id['id'], $text_report, null, 'HTML');
     }
     $Payment_report['price'] = number_format($Payment_report['price']);
@@ -6607,7 +6613,7 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
     }
     sendmessage($from_id, $textbotlang['Admin']['price']['priceSaved'], $CartManage, 'HTML');
     step("home", $from_id);
-    update("PaySetting", "ValuePay", $text, "NamePay", "chashbackaqaypardokht");
+    update("PaySetting", "ValuePay", $text, "NamePay", "chashbackaqayepardakht");
 } elseif ($text == $textbotlang['keyboard']['feeStatusIranPay2'] && $adminrulecheck['rule'] == "administrator") {
     $feeStatusNow = getPaySetting("feestatusternado")['ValuePay'] ?? 'offfeeternado';
     $feeStatusNew = ($feeStatusNow === 'onfeeternado') ? 'offfeeternado' : 'onfeeternado';
