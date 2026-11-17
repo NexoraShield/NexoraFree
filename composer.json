@@ -1,9 +1,9 @@
 {
-    "name": "nexorapro/nexorabot",
-    "description": "nexora Bot - Telegram VPN sales and management bot",
+    "name": "nexora/nexora",
+    "description": "Nexora Bot - Telegram VPN sales and management bot",
     "type": "project",
     "license": "AGPL-3.0-or-later",
-    "homepage": "https://github.com/mahdiMGF2/nexorabot",
+    "homepage": "https://github.com/NexoraShield/NexoraFree",
     "require": {
         "php": ">=8.2",
         "endroid/qr-code": "^6.0",

@@ -68,8 +68,11 @@ fc6648da06acebfe96ad5a8f077f569c5c4dd75b77122951723ddfbfeb191728 *./app/fonts/Va
 32d9657c7095d188436e6d5ffd69fb6e2495f9ae7b7fd22050b6825db25863ed *./app/pay.php
 11ee23b8fc2fc619d6eab6277adb5a527261067ac01ccfc3e11857f55bf18bcd *./app/version
 5f523c0d1b3d3a6aace0ea73218a6c989667bcb6fbd94b0ed89c39a0939bb392 *./botapi.php
+1e10c98ec279de3247a5ff616c39f2acf78668936f2de56f2b97d4c91ca2830c *./brand/avatar-nexora-shield-mark.png
+e7f0bab416a27fac8b14146a225b46a1ffbc69d537b190d8cec71f1b9d2b7969 *./brand/avatar-nexora-shield.png
+9980642b8cdc6dfc541a58b6081cbbb664efe491fc617039dabb5667f1e280ec *./brand/banner-nexorafree.png
 2247a5c36b637fd558a3d18520863b9eda0f6549958f399fed48d20d780c084a *./channel_post_admin.php
-24b40c646d27fda3a05d154a7cb4f37ff5c6ed0141802b8ef8435b6f50434aae *./composer.json
+8e9922a5d7b1b3b04cc39fb001506c2a4aa7a31a8a1d9b09713b67d41c8c59c2 *./composer.json
 0b10ae028ffcb26086b8dfab995920b920307d1cddd1b76e5ddf8d85ddd679c9 *./composer.lock
 97919b906f2cfa8fff81f0542ae8e9d99a5df1e039b4a25831bd3e662708a218 *./config.php
 0b6b838d23bef3748f6f55522362339e1882ea76e4ed0d7a1723fce6eaed5ee8 *./cronbot/.htaccess
@@ -232,7 +235,7 @@ d62b90d86eb438f9b1d07bf404b47701a9815f5c95d998cf3febf0e46a319f2b *./panel/js/pro
 f484bb740373d6531b8f902fc99ebec51052bcee7e993cdbfd4ef264db58e469 *./panel/js/settings.js
 3fd5ab59e7943343399cde79255d244fd6a48a821bba251225e5b8ce6763b1aa *./panel/js/sort_keyboard.js
 aa7ec73e8f8fab118bfb8bc74aaf9a61254fa0b4ffbcfba66243a78d2acbc4d5 *./panel/js/users.js
-85f60b7d983ac6fc2d1f7c44d1ef07b538e658bfba937890793475827b2800d4 *./panel/login.php
+63d4dc8a5241f83f7a35f6113e71019457d267c8141b237ae008b299ea74f2f8 *./panel/login.php
 156505b398c7bd51a85ea06d81eacc0687855eb67217eb85cc06b46ed34c57b7 *./panel/logout.php
 1820fffcbdac29b5614a4d41b97a500ac4e4f0f04bd43df589d417bbbf1f5e0a *./panel/maintenance.php
 79356c71453e34e222e0845882e387c9dfcf129d0b2023669c652e2b57d36d1c *./panel/panels.php
